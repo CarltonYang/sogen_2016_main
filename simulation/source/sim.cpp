@@ -440,8 +440,7 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
         
         int time_prev = WRAP(baby_j - 1, sd.max_delay_size); // Time is cyclical, so time_prev may not be baby_j - 1
         copy_records(sd, baby_cl, baby_j, time_prev); // Copy each cell's birth and parent so the records are accessible at every time step
-        double avg_delta=0;
-        double avg_rest=0;
+       
         
         // Iterate through each extant cell
         for (int k = 0; k < sd.cells_total; k++) {
@@ -455,7 +454,7 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
                 st_context stc(time_prev, baby_j, k);
                 protein_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_protein);
                 dimer_proteins(sd, rs.rates_active, baby_cl, stc);
-                mRNA_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_mrna, md, past_induction, past_recovery, avg_delta,avg_rest);
+                mRNA_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_mrna, md, past_induction, past_recovery);
             }
         }
         /*
@@ -888,7 +887,7 @@ inline void con_dimer (cd_args& a, int con, int offset, cd_indices i) {
  
 	151221: Added mRNA transcription for meps genes, pay attention to index of mesp genes
  */
-void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc, int old_cells_mrna[], mutant_data& md, bool past_induction, bool past_recovery, double& avg_delta,double& avg_rest ) {
+void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc, int old_cells_mrna[], mutant_data& md, bool past_induction, bool past_recovery ) {
     // Translate delays from minutes to time steps
     int delays[NUM_INDICES];
     for (int j = 0; j < NUM_INDICES; j++) {
@@ -994,10 +993,10 @@ void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc,
             mtrans = transcription_mespa(rs, cl, WRAP(stc.time_cur - delays[j], sd.max_delay_size), old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe, sd.section);
             //cout<<"mespa"<<mtrans<<endl;
         } else if (j == IMMESPB && sd.section == SEC_ANT) {
-            mtrans = transcription_mespb(rs, cl, WRAP(stc.time_cur - delays[j], sd.max_delay_size), old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe, avg_delta, avg_rest);
+            mtrans = transcription_mespb(rs, cl, WRAP(stc.time_cur - delays[j], sd.max_delay_size), old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe);
             
         } else {
-            mtrans = transcription(rs, cl, WRAP(stc.time_cur - delays[j], sd.max_delay_size), old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe, avg_delta, avg_rest);
+            mtrans = transcription(rs, cl, WRAP(stc.time_cur - delays[j], sd.max_delay_size), old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe);
         }
         
         //}
@@ -1023,7 +1022,7 @@ void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc,
 	todo:
  TODO clean up these parameters
  */
-inline double transcription (double** rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe, double& avg_delta, double& avg_rest) {
+inline double transcription (double** rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe) {
     double th1h1= 0, tdelta;
     th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : avgpd / rs[RCRITPDELTA][cell];
@@ -1067,7 +1066,7 @@ inline double transcription_mespa (double** rs, con_levels& cl, int time, int ce
 	todo:
  TODO clean up these parameters
  */
-inline double transcription_mespb (double** rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe, double& avg_delta, double& avg_rest) {
+inline double transcription_mespb (double** rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe) {
     double tmespamespa = 0, tmespamespb = 0, tmespbmespb = 0, tdelta;
     //th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     //th7h13 = rs[RCRITPH7H13][cell] == 0 ? 0 : cl.cons[CPH7H13][time][cell] / rs[RCRITPH7H13][cell];
