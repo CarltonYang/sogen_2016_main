@@ -278,6 +278,7 @@ void print_passed (input_params& ip, ofstream* file_passed, rates& rs) {
 		If binary mode is set, the file will get the extension .bcons and print raw binary values, not ASCII text.
 		The concentration printed is mutant dependent, but usually mh1.
 	todo:
+        june 2016, changed printing so that .cons actually corresponds to con_lv
 */
 void print_concentrations (input_params& ip, sim_data& sd, con_levels& cl, mutant_data& md, char* filename_cons, int set_num) {
 	if (ip.print_cons) { // Print the concentrations only if the user specified it
@@ -299,7 +300,7 @@ void print_concentrations (input_params& ip, sim_data& sd, con_levels& cl, mutan
 		mfree(filename_set);
 		mfree(str_set_num);
 		mfree(extension);
-		
+        
 		// If the file was just created then prepend the concentration levels with the simulation size
 		if (sd.section == SEC_POST) {
 			if (ip.binary_cons_output) {
@@ -323,20 +324,27 @@ void print_concentrations (input_params& ip, sim_data& sd, con_levels& cl, mutan
 				for (int i = 0; i < sd.height; i++) {
 					int num_printed = 0;
 					for (int k = cl.active_start_record[j]; num_printed < sd.width_total; k = WRAP(k - 1, sd.width_total), num_printed++) {
-						float con = cl.cons[md.print_con][j][i * sd.width_total + k];	
-						file_cons.write((char*)(&con), sizeof(float));
+						double con = cl.cons[md.print_con][j][i * sd.width_total + k];
+						file_cons.write((char*)(&con), sizeof(double));
 					}
 				}
 			}
-		} else {
+            
+		}
+        
+        else {
+            
 			for (int j = start; j < end; j++) {
 				int time_step = (j + step_offset) * sd.big_gran;
 				file_cons << time_step << " ";
 				for (int i = 0; i < sd.height; i++) {
 					int num_printed = 0;
-					for (int k = cl.active_start_record[j]; num_printed < sd.width_total; k = WRAP(k - 1, sd.width_total), num_printed++) {
-						file_cons << cl.cons[md.print_con][j][i * sd.width_total + k] << " ";
-					}
+                
+                     for (int k = cl.active_start_record[j]; num_printed < sd.width_total; k = WRAP(k - 1, sd.width_total), num_printed++) {
+                         //cout<<i * sd.width_total + k<<" "<<j<<endl;
+                        file_cons << cl.cons[md.print_con][j][i * sd.width_total + k] << " ";
+                     }
+                    
 				}
 				file_cons << "\n";
 			}
@@ -467,8 +475,8 @@ void print_osc_features (input_params& ip, ofstream* file_features, mutant_data 
 		try {
 			*file_features << set_num << ",";
 			for (int i = 0; i < ip.num_active_mutants; i++) {
-				*file_features << mds[i].feat.sync_score_post[IMH1] << "," << mds[i].feat.period_post[IMH1] << "," << mds[i].feat.amplitude_post[IMH1] << "," << (mds[i].feat.period_post[IMH1]) / (mds[MUTANT_WILDTYPE].feat.period_post[IMH1]) << "," << (mds[i].feat.amplitude_post[IMH1]) / (mds[MUTANT_WILDTYPE].feat.amplitude_post[IMH1]) << ",";
-				*file_features << mds[i].feat.sync_score_ant[IMH1] << "," << mds[i].feat.period_ant[IMH1] << "," << mds[i].feat.amplitude_ant[IMH1] << "," << (mds[i].feat.period_ant[IMH1]) / (mds[MUTANT_WILDTYPE].feat.period_ant[IMH1]) << "," << (mds[i].feat.amplitude_ant[IMH1]) / (mds[MUTANT_WILDTYPE].feat.amplitude_ant[IMH1]) << ",";
+				//*file_features << mds[i].feat.sync_score_post[IMH1] << "," << mds[i].feat.period_post[IMH1] << "," << mds[i].feat.amplitude_post[IMH1] << "," << (mds[i].feat.period_post[IMH1]) / (mds[MUTANT_WILDTYPE].feat.period_post[IMH1]) << "," << (mds[i].feat.amplitude_post[IMH1]) / (mds[MUTANT_WILDTYPE].feat.amplitude_post[IMH1]) << ",";
+				//*file_features << mds[i].feat.sync_score_ant[IMH1] << "," << mds[i].feat.period_ant[IMH1] << "," << mds[i].feat.amplitude_ant[IMH1] << "," << (mds[i].feat.period_ant[IMH1]) / (mds[MUTANT_WILDTYPE].feat.period_ant[IMH1]) << "," << (mds[i].feat.amplitude_ant[IMH1]) / (mds[MUTANT_WILDTYPE].feat.amplitude_ant[IMH1]) << ",";
 			}
 			if (num_passed == ip.num_active_mutants) {
 				*file_features << "PASSED" << endl;

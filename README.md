@@ -1,4 +1,4 @@
-Zebrafish somitogenesis simulation
+fZebrafish somitogenesis simulation
 ==================================
 
 Table of contents
@@ -1126,10 +1126,18 @@ plot-cells produces plots (and their accompanying data) of cell mRNA values over
 *********************************
 **5.6.1: Command-line arguments**
 
-plot-cells takes 4 arguments, described below:
+plot-cells takes 5 arguments, described below:
 
 ```
-python plot-cells.py <file with concentration levels> <directory to store plots> <plot name> <step size>
+python plot-cells.py <file with concentration levels> <directory to store plots> <plot name> <step size> <plot type> <position> <number of column>
+last one is only used in plotting multiple columns, enter 1 otherwise
+plot types are cell, one cell over time , position will be cell#
+               col, one or more column over time, position will be starting column, number of column is how many columns following
+               row, all rows at some specific time step, position will be time step, 0-#of min *100
+               all, entire PSM over time, position and # of column not important, set to 1
+               col_t, keep track of concentration level of a column over time(as the PSM grows), position will be the starting position, *(choose timestep to be added)
+
+
 ```
 
 The concentration levels file and plot storing directory can be absolute or relative. The concentration levels directory should be structured as it is produced by a standard simulation. The plot name should not include the file extension, which is .png.
@@ -1138,7 +1146,7 @@ The concentration levels file and plot storing directory can be absolute or rela
 **5.6.2: Example program calls**
 
 ```
-python plot-cells.py set.cons plots her1levels 0.01
+python plot-cells.py set.cons plots her1levels 0.01 first
 ```
 
 **************************************************************

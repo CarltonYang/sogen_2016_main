@@ -45,9 +45,9 @@ Sample command line for running simulation:
 -w, --initial-width      [int]        : the tissue width in cells before anterior growth, min=3, max=total width, default=3
 -y, --height             [int]        : the tissue height in cells, min=1, default=1
 -S, --step-size          [float]      : the size of the timestep to be used for solving the DDEs using Euler's method, default=0.01
--m, --total-time         [int]        : the number of minutes to simulate before ending, min=1, default=1200
+-m, --total-time         [int]        : the number of minutes to simulate before ending, min=1, default=930
 -T, --split-time         [int]        : the number of minutes it takes for cells to split, min=1, default=6, 0=never
--G, --time-til-growth    [int]        : the number of minutes to wait before allowing cell growth, min=0, default=600
+-G, --time-til-growth    [int]        : the number of minutes to wait before allowing cell growth, min=0, default=300
 -p, --parameter-sets     [int]        : the number of parameters for which to simulate the model, min=1, default=1
 -s, --seed               [int]        : the seed to generate random numbers, min=1, default=generated from the time and process ID
 -X, --reset-seed         [N/A]        : reset the seed after each parameter set so the initial seed is used each time, default=unused
@@ -64,6 +64,8 @@ Sample command line for running simulation:
 -l, --licensing          [N/A]        : view licensing information (no simulations will be run)
 -h, --help               [N/A]        : view usage information (i.e. this)
 
+//sample
+./simulation -x 50 -w 10 -y 4 -i set151119.params -s 2000 -S 0.01 -M 1 -V 600 -Y 600 -Z 600 -Q 600 -K 600 -r gradient1.txt -t -D output -L 1
 
 
 things to know:
@@ -84,7 +86,7 @@ Sample command line:
 -r, --ranges-file        [filename]   : the relative filename of the ranges input file, default=none
 -f, --simulation         [filename]   : the relative filename of the simulation executable, default=../simulation/simulation
 -d, --dimensions         [int]        : the number of dimensions (i.e. rate parameters) to explore, min=1, default=45
--P, --parent-population  [int]        : the population of parent simulations to use each generation, min=1, default=3
+-P, --parent-population  [int]        : the population of parent simulations to use each generation, min=1, defa++ult=3
 -p, --total-population   [int]        : the population of total simulations to use each generation, min=1, default=20
 -g, --generations        [int]        : the number of generations to run before returning results, min=1, default=1750
 -s, --seed               [int]        : the seed used in the evolutionary strategy (not simulations), min=1, default=time
@@ -319,7 +321,16 @@ I mark most of my comments with "151221" so you can find them more easily.
 
 
 
-
+7. compiling
+mpicxx -o source/main.o -c -Wall -O2 -D MPI source/main.cpp   
+mpicxx -o source/init.o -c -Wall -O2 -D MPI source/init.cpp   
+mpicxx -o source/io.o -c -Wall -O2 -D MPI source/io.cpp   
+mpicxx -o source/sres.o -c -Wall -O2 -D MPI source/sres.cpp   
+mpicxx -o source/memory.o -c -Wall -O2 -D MPI source/memory.cpp   
+mpicxx -o libsres-mpi/sharefunc.o -c -Wall -O2 -D MPI libsres-mpi/sharefunc.cpp
+mpicxx -o libsres-mpi/ESSRSort.o -c -Wall -O2 -D MPI libsres-mpi/ESSRSort.cpp
+mpicxx -o libsres-mpi/ESES.o -c -Wall -O2 -D MPI libsres-mpi/ESES.cpp
+mpicxx -o sres libsres-mpi/ESES.o libsres-mpi/ESSRSort.o libsres-mpi/sharefunc.o source/init.o source/io.o source/memory.o source/sres.o source/main.o
 
 
 

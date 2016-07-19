@@ -25,22 +25,13 @@ macros.hpp contains every constant and macro function used in the program.
 
 // Mutant indices
 #define MUTANT_WILDTYPE		0
-//#define MUTANT_HER7			1
-//#define MUTANT_HER13		2
 #define MUTANT_DELTA		1
-//#define MUTANT_HER7HER13	4
-//#define MUTANT_HER1			5
-//#define MUTANT_HER7DELTA	6
-//#define MUTANT_HER1DELTA	7
-#define MUTANT_HER7OVER		2
-#define MUTANT_HER1OVER		3
-//#define MUTANT_DELTAOVER	10
-#define MUTANT_DAPT       4
-//#define MUTANT_HER1HER7   12
-#define MUTANT_MESPAOVER	5
-#define MUTANT_MESPBOVER	6
+#define MUTANT_HER1OVER		2
+#define MUTANT_DAPT         3
+#define MUTANT_MESPAOVER	4
+#define MUTANT_MESPBOVER	5
 
-#define NUM_MUTANTS 		7
+#define NUM_MUTANTS 		6
 
 /// Named shortcuts for each concentration level of mRNA, protein, and dimer
 
@@ -49,185 +40,127 @@ macros.hpp contains every constant and macro function used in the program.
 
 // mRNA levels
 #define CMH1		1
-#define CMH7		2
-#define CMMESPA     3
-#define CMMESPB     4
-#define CMH13		5
-#define CMDELTA	    6
+#define CMMESPA     2
+#define CMMESPB     3
+#define CMDELTA	    4
 
 // Protein levels
-#define CPH1		7
-#define CPH7		8
-#define CPMESPA     9
-#define CPMESPB     10
-#define CPH13		11
-#define CPDELTA     12
+#define CPH1		5
+#define CPMESPA     6
+#define CPMESPB     7
+#define CPDELTA     8
 
 // Dimer levels
-#define CPH1H1		13
-#define CPH1H7		14
-#define CPH1H13		15
-
-#define CPH7H7		16
-#define CPH7H13		17
-
-#define CPMESPAMESPA  18
-#define CPMESPAMESPB  19
-
-#define CPMESPBMESPB  20
-
-#define CPH13H13  21
+#define CPH1H1		9
+#define CPMESPAMESPA  10
+#define CPMESPAMESPB  11
+#define CPMESPBMESPB  12
 
 // The index of the cell's parent
-#define PARENT		22
+#define PARENT		13
 
-#define NUM_CON_LEVELS	23 // How big an array holding concentration levels must be
-#define NUM_CON_STORE	7 // How many concentration levels to store in the bigger struct (for analyzing oscillation features)
+#define NUM_CON_LEVELS	14 // How big an array holding concentration levels must be
+#define NUM_CON_STORE	5 // How many concentration levels to store in the bigger struct (for analyzing oscillation features)
+//potentially reason for segmentation fault
 #define MIN_CON_LEVEL	1 // The smallest index of a concetration level not including BIRTH or PARENT
-#define MAX_CON_LEVEL	21 // The largest index of a concentration level not including BIRTH or PARENT
+#define MAX_CON_LEVEL	12 // The largest index of a concentration level not including BIRTH or PARENT
 
 /// Named shortcuts for each rate of mRNA, protein, and dimer
 
 // mRNA synthesis rates
 #define RMSH1			0
-#define RMSH7			1
-#define RMSMESPA        2
-#define RMSMESPB        3
-#define RMSH13			4
-#define RMSDELTA		5
+#define RMSMESPA        1
+#define RMSMESPB        2
+#define RMSDELTA		3
 
 // mRNA degradation rates
-#define RMDH1			6
-#define RMDH7			7
-#define RMDMESPA        8
-#define RMDMESPB        9
-#define RMDH13			10
-#define RMDDELTA		11
+#define RMDH1			4
+#define RMDMESPA        5
+#define RMDMESPB        6
+#define RMDDELTA		7
 
 // Protein synthesis rates
-#define RPSH1			12
-#define RPSH7			13
-#define RPSMESPA        14
-#define RPSMESPB        15
-#define RPSH13			16
-#define RPSDELTA		17
+#define RPSH1			8
+#define RPSMESPA        9
+#define RPSMESPB        10
+#define RPSDELTA		11
 
 // Protein degradation rates
-#define RPDH1			18
-#define RPDH7			19
-#define RPDMESPA        20
-#define RPDMESPB        21
-#define RPDH13			22
-#define RPDDELTA		23
+#define RPDH1			12
+#define RPDMESPA        13
+#define RPDMESPB        14
+#define RPDDELTA		15
 
 // Dimer association rates
-#define RDAH1H1         24
-#define RDAH1H7         25
-#define RDAH1H13		26
-
-#define RDAH7H7		    27
-#define RDAH7H13		28
-
-#define RDAMESPAMESPA   29
-#define RDAMESPAMESPB   30
-
-#define RDAMESPBMESPB   31
-
-#define RDAH13H13       32
+#define RDAH1H1         16
+#define RDAMESPAMESPA   17
+#define RDAMESPAMESPB   18
+#define RDAMESPBMESPB   19
 
 // Dimer dissociation rates
-#define RDDIH1H1        33
-#define RDDIH1H7        34        
-
-#define RDDIH1H13       35
-
-#define RDDIH7H7        36
-
-#define RDDIH7H13		37
-
-#define RDDIMESPAMESPA   38
-#define RDDIMESPAMESPB   39
-
-#define RDDIMESPBMESPB   40
-
-#define RDDIH13H13       41
+#define RDDIH1H1        20
+#define RDDIMESPAMESPA   21
+#define RDDIMESPAMESPB   22
+#define RDDIMESPBMESPB   23
 
 // Dimer degradation rates
-#define RDDGH1H1        42
-#define RDDGH1H7        43        
-#define RDDGH1H13       44
-
-#define RDDGH7H7        45
-#define RDDGH7H13		46
-
-#define RDDGMESPAMESPA   47
-#define RDDGMESPAMESPB   48
-
-#define RDDGMESPBMESPB   49
-
-#define RDDGH13H13       50
+#define RDDGH1H1        24
+#define RDDGMESPAMESPA   25
+#define RDDGMESPAMESPB   26
+#define RDDGMESPBMESPB   27
 
 // mRNA transcription delays
-#define RDELAYMH1		51
-#define RDELAYMH7		52
-#define RDELAYMMESPA    53
-#define RDELAYMMESPB    54
-#define RDELAYMH13		55
-#define RDELAYMDELTA	56
+#define RDELAYMH1		28
+#define RDELAYMMESPA    29
+#define RDELAYMMESPB    30
+#define RDELAYMDELTA	31
 
 // Protein translation delays
-#define RDELAYPH1		57
-#define RDELAYPH7		58
-#define RDELAYPMESPA    59
-#define RDELAYPMESPB    60
-#define RDELAYPH13		61
-#define RDELAYPDELTA	62
+#define RDELAYPH1		32
+#define RDELAYPMESPA    33
+#define RDELAYPMESPB    34
+#define RDELAYPDELTA	35
 
 // Critical numbers of molecules of proteins per cell for inhibition of transcription
-#define RCRITPH1H1 		63
-#define RCRITPH7H13		64
-#define RCRITPDELTA		65
-#define RCRITPMESPAMESPA 66
-#define RCRITPMESPAMESPB 67
-#define RCRITPMESPBMESPB 68
+#define RCRITPH1H1 		36
+#define RCRITPDELTA		37
+#define RCRITPMESPAMESPA 38
+#define RCRITPMESPAMESPB 39
+#define RCRITPMESPBMESPB 40
 
 // Network structure variable
-#define NS1				69
-#define NS2				70
-
-#define NUM_RATES		71 // How big an array holding rates must be
-#define MIN_DELAY		51 // The smallest index referring to a delay
-#define MAX_DELAY		62 // The largest index referring to a delay
+#define NS1				41
+#define NS2				42
+//#define OEHER           43
+//#define OEMESPA         44
+//#define OEMESPB         45
+#define NUM_RATES		43 // How big an array holding rates must be
+#define MIN_DELAY		28 // The smallest index referring to a delay
+#define MAX_DELAY		35 // The largest index referring to a delay
 
 /// Named shortcuts for each index of mRNA, protein, dimer
 
 // Her gene indices
 #define IH1		0
-#define IH7		1
-#define IMESPA  2
-#define IMESPB  3
-#define IH13	4
-
-#define NUM_HER_INDICES	5 // How big an array holding the her gene indices must be
-
+#define IMESPA  1
+#define IMESPB  2
+#define NUM_HER_INDICES	3 // How big an array holding the her gene indices must be
+//
+// need to checked
+//
 // mRNA indices
 #define IMH1 	0
-#define IMH7 	1
-#define IMMESPA 2
-#define IMMESPB 3
-#define IMH13	4
-#define IMDELTA	5
+#define IMMESPA 1
+#define IMMESPB 2
+#define IMDELTA	3
 
 // Protein indices
 #define IPH1	0
-#define IPH7	1
-#define IPMESPA 2
-#define IPMESPB 3
-#define IPH13	4
-#define IPDELTA	5
-
-#define NUM_INDICES		6 // How big an array holding mRNA or protein indices must be
-#define NUM_DD_INDICES	4 // How many mRNA levels are affected by Delta and need to calculate its affects (stands for delta dependent indices)
+#define IPMESPA 1
+#define IPMESPB 2
+#define IPDELTA	3
+#define NUM_INDICES		4 // How big an array holding mRNA or protein indices must be
+#define NUM_DD_INDICES	3 // How many mRNA levels are affected by Delta and need to calculate its affects (stands for delta dependent indices)
 
 // Neighbor counts
 #define NEIGHBORS_1D	2
@@ -236,9 +169,7 @@ macros.hpp contains every constant and macro function used in the program.
 // Condition testing sections
 #define SEC_POST		0
 #define SEC_ANT			1
-#define SEC_WAVE		2
-#define NUM_SECTIONS	3
-
+#define NUM_SECTIONS	2
 // Oscillation features
 #define NUM_FEATS	2
 
@@ -281,5 +212,9 @@ macros.hpp contains every constant and macro function used in the program.
 #define WRAP(x, y) ((x) + (y)) % (y)
 #define INT_STRLEN(x) (log10((x) > 0 ? (x) : 1) + 1)
 
+
+
+//define cut offs for satisfied conditions
+#define AMP_SAT  0.3
 #endif
 

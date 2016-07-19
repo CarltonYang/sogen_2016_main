@@ -1,12 +1,11 @@
-#PBS -N sres_15
-#PBS -l nodes=1:ppn=4
+#PBS -N sres_16s_test40x
+#PBS -l nodes=bm0001:ppn=10+bm0002:ppn=10
 #PBS -q biomath
-#PBS -M jye@colgate.edu
+#PBS -M cyang@colgate.edu
 #PBS -m bea
 #PBS -j oe
 #PBS -r n
-#
+
 cd $PBS_O_WORKDIR
 
-mpiexec -np 4 ./sres -r guess.ranges -g 100 -a -x 10 -w 10 -y 6 -M 1
-
+mpiexec -np 20 ./sres -r fguessnew.ranges -g 800 -p 100 -P 16 -a -x 50 -w 10 -y 4 -M 6 -V 600 -Y 600 -Z 600 -Q 600 -K 600 -r ../simulation/gradient1.txt -u ../simulation/pert.txt > o40x.txt 

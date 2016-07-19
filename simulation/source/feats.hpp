@@ -28,12 +28,14 @@ feats.hpp contains function declarations for feats.cpp.
 
 int get_peaks_and_troughs1(sim_data&, con_levels&, int, int, growin_array&, growin_array&, growin_array&, int);
 int get_peaks_and_troughs2(sim_data&, con_levels&, int, int, growin_array&, growin_array&, growin_array&, int, double*, double*, double*);
-void osc_features_post(sim_data&, input_params&, con_levels&, features&, features&, char*, int, int, int);
+void osc_features_post(sim_data&, input_params&, con_levels&, features&, features&, mutant_data&, char*, int, int, int);
 double test_mesp_complementary(sim_data&, con_levels&, int);
 double test_compl(sim_data& sd, double* con1, double* con2, int num_cell);
 void osc_features_ant(sim_data&, input_params&, features&, char*, con_levels&, mutant_data&, int, int, int, int, int);
 double post_sync(sim_data&, con_levels&, int, int, int);
 double ant_sync(sim_data&, con_levels&, int, int);
+double mesp_sync(sim_data&, con_levels&, int, int);
+double amp_10(sim_data& sd, con_levels& cl, int con, int time);
 double avg_amp (sim_data& sd, con_levels&, int con, int time, int start, int end);
 void plot_ant_sync(sim_data&, con_levels&, int, ofstream*, bool);
 double pearson_correlation(double*, double*, int, int);

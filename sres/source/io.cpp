@@ -112,7 +112,7 @@ void parse_ranges_file (char* buffer, input_params& ip, sres_params& sp) {
 	for (; buffer[i] != '\0'; i++) {
 		// Ensure that the number of rates in the given ranges file does not exceed the given number of dimensions
 		if (rate >= ip.num_dims) {
-			cout << term->red << "The number of rates in the given ranges file does not match the given number of dimensions! Please check that the rates file matches the number of dimensions (" << ip.num_dims << ")." << term->reset << endl;
+			cout << term->red << rate<<"  The number of rates in the given ranges file does not match the given number of dimensions! Please check that the rates file matches the number of dimensions (" << ip.num_dims << ")." << term->reset << endl;
 		exit(EXIT_INPUT_ERROR);
 		}
 		

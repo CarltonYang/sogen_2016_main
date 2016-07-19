@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
 	fill_perturbations(*rs, perturb_data.buffer);
 	fill_gradients(*rs, gradients_data.buffer);
 	calc_max_delay_size(ip, sd, *rs, sets);
-	mutant_data* mds = create_mutant_data(sd, ip);
+	mutant_data* mds = create_mutant_data(sd, ip, *rs);
 	sd.initialize_conditions_data(mds);
 	
 	// Create the specified output files

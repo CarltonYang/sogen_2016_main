@@ -21,7 +21,7 @@ feats.cpp contains functions to analyze and test the oscillation features of sim
 */
 
 #include <cfloat> // Needed for DBL_MAX
-
+#include <algorithm>
 #include "feats.hpp" // Function declarations
 
 #include "io.hpp"
@@ -44,11 +44,10 @@ int get_peaks_and_troughs1 (sim_data& sd, con_levels& cl, int actual_cell, int t
 	*/
 	int num_points = 0;
 	int col = actual_cell % sd.width_total;
-	
-	double** conc = cl.cons[mr];
+    //cout<< "time start :  " <<time_start<<endl;
+	concentration_level<double>::timespan conc = cl.cons[mr];
 	for (int j = time_start + 1; j < sd.time_end - 1 && cl.cons[BIRTH][j][actual_cell] == cl.cons[BIRTH][j - 1][actual_cell] && cl.cons[BIRTH][j][actual_cell] == cl.cons[BIRTH][j + 1][actual_cell]; j++) {
-		
-		int pos = 0;
+       		int pos = 0;
 		if (cl.active_start_record[j] >= col) {
 			pos = cl.active_start_record[j] - col;
 		} else {
@@ -95,16 +94,17 @@ int get_peaks_and_troughs2 (sim_data& sd, con_levels& cl, int actual_cell, int t
 	int num_points = 0;
 	int col = actual_cell % sd.width_total;
 	
-	double** conc = cl.cons[mr];
+	concentration_level<double>::timespan conc = cl.cons[mr];
 	int compl_count=0;
 	for (int j = time_start + 1; j < sd.time_end - 1 && cl.cons[BIRTH][j][actual_cell] == cl.cons[BIRTH][j - 1][actual_cell] && cl.cons[BIRTH][j][actual_cell] == cl.cons[BIRTH][j + 1][actual_cell]; j++) {
 		// calculate position in the PSM of the cell
-		
-		mh1_comp[compl_count]=cl.cons[CMH1][j][actual_cell];                 //record concentration value of mh1 151221
-		mespa_comp[compl_count]=cl.cons[CMMESPA][j][actual_cell];           //record concentration value of mespa 151221
-		mespb_comp[compl_count]=cl.cons[CMMESPB][j][actual_cell];             //record concentration value of mespb 151221
-		compl_count++;
-		
+        
+        
+        mh1_comp[compl_count]=cl.cons[CMH1][j][actual_cell];                 //record concentration value of mh1 151221
+        mespa_comp[compl_count]=cl.cons[CMMESPA][j][actual_cell];           //record concentration value of mespa 151221
+        mespb_comp[compl_count]=cl.cons[CMMESPB][j][actual_cell];             //record concentration value of mespb 151221
+        compl_count++;
+        
 		int pos = 0;
 		if (cl.active_start_record[j] >= col) {
 			pos = cl.active_start_record[j] - col;
@@ -166,19 +166,17 @@ double test_complementary (sim_data& sd, con_levels& cl, int time, int con1, int
 }
 
 double test_compl(sim_data& sd, double* con1, double* con2) {  // 151221: calculate the complementary expression score of mespa and mespb
-	//int count=sd.width_total*sd.steps_split - 2;
-	
-	return pearson_correlation(con1, con2, (int)(0.6*(sd.width_total*sd.steps_split - 2)),sd.width_total*sd.steps_split - 2);   
+	return pearson_correlation(con1, con2, (int)(0.6*(sd.width_total*sd.steps_split - 2)),sd.width_total*sd.steps_split - 2);
 }
 
 
 
 void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* filename_feats, con_levels& cl, mutant_data& md, int start_line, int end_line, int start_col, int end_col, int set_num) {
-	static int con[5] = {CMH1, CMH7, CMDELTA, CMMESPA, CMMESPB};
-	static int ind[5] = {IMH1, IMH7, IMDELTA, IMMESPA, IMMESPB};
-	static const char* concs[5] = {"mh1", "mh7," "mdelta", "mespa", "mespb"};
+	static int con[4] = {CMH1,  CMDELTA, CMMESPA, CMMESPB};
+	static int ind[4] = {IMH1,  IMDELTA, IMMESPA, IMMESPB};
+	static const char* concs[4] = {"mh1",  "mdelta", "mespa", "mespb"};
 	static const char* feat_names[NUM_FEATURES] = {"period", "amplitude", "sync"};
-	static double curve[101] = {1, 1.003367003, 1.003367003, 1.003367003, 1.004713805, 1.004713805, 1.007407407, 1.015488215, 1.015488215, 1.020875421, 1.023569024, 1.023569024, 1.026262626, 1.028956229, 1.037037037, 1.037037037, 1.03973064, 1.042424242, 1.047811448, 1.050505051, 1.055892256, 1.058585859, 1.061279461, 1.066666667, 1.069360269, 1.072053872, 1.077441077, 1.082828283, 1.088215488, 1.090909091, 1.096296296, 1.098989899, 1.104377104, 1.10976431, 1.115151515, 1.115151515, 1.120538721, 1.125925926, 1.128619529, 1.139393939, 1.142087542, 1.15016835, 1.155555556, 1.160942761, 1.169023569, 1.174410774, 1.182491582, 1.187878788, 1.195959596, 1.201346801, 1.212121212, 1.22020202, 1.228282828, 1.239057239, 1.247138047, 1.255218855, 1.268686869, 1.276767677, 1.287542088, 1.301010101, 1.314478114, 1.325252525, 1.336026936, 1.352188552, 1.368350168, 1.381818182, 1.397979798, 1.414141414, 1.432996633, 1.454545455, 1.476094276, 1.492255892, 1.519191919, 1.546127946, 1.573063973, 1.6, 1.632323232, 1.672727273, 1.705050505, 1.742760943, 1.785858586, 1.837037037, 1.896296296, 1.955555556, 2.025589226, 2.106397306, 2.195286195, 2.303030303, 2.418855219, 2.572390572, 2.725925926, 2.941414141, 3.208080808, 3.574410774, 4, 8.399297321, 12.79859464, 17.19789196, 21.59718928, 25.99648661, 30.39578393};
+	
 	
 	growin_array crit_points(sd.steps_total / (20/sd.step_size)); // Array that will hold all the critical points in the graph
 	growin_array type(sd.steps_total / (20/sd.step_size)); // Array that will specify whether each critical point is a peak or a trough (-1 for trough, 1 for peak)
@@ -199,7 +197,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 	memset(mespb_comp, 0, sizeof(double) * (sd.width_total*sd.steps_split - 2));
 	
 	
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 4; i++) {
 		ofstream features_files[NUM_FEATURES]; // Array that will hold the files in which to output the period and amplitude
 	
 		int mr = con[i];
@@ -216,368 +214,336 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 			features_files[PERIOD] << sd.height << "," << sd.width_total << endl;
 			features_files[AMPLITUDE] << sd.height << "," << sd.width_total << endl;
 		}
-		double** conc = cl.cons[mr];
-		double amp_avg = 0;
-		double period_avg = 0;
-        int time_start;
-        if (md.induction == 0) {
-		    time_start = anterior_time(sd, sd.steps_til_growth + (sd.width_total - sd.width_initial) * sd.steps_split); // time after which the PSM is full of cells
-        } else {
-            //time_start = anterior_time(sd, md.induction + (30 / sd.big_gran));
-			time_start = anterior_time(sd, sd.steps_til_growth + (sd.width_total - sd.width_initial) * sd.steps_split);//anterior_time(sd, sd.steps_til_growth + (30 / sd.step_size));
-        }
-		int num_cells_passed = 0;
+		if (md.index == MUTANT_WILDTYPE && (mr == CMH1 || mr == CMMESPA)) {
+            double period_avg = 0;
+            int time_start= anterior_time(sd, sd.steps_til_growth + (sd.width_total - sd.width_initial) * sd.steps_split); // time after which the PSM is full of cells
+            int num_cells_passed = 0;
+            //cout<<"time: " << time_start<< " "<<sd.steps_til_growth + (sd.width_total - sd.width_initial) * sd.steps_split<<" "<< sd.time_end<<endl;
+            //cout<<"time:  "<<anterior_time(sd,93000)<<endl;
+            for (int col = start_col; col < end_col; col++) {						
+                for (int line = start_line; line < end_line; line++) {
+                    int pos = cl.active_start_record[time_start]; // always looking at cell at position active_start because that is the newest cell
+                    
+                    int cell = line * sd.width_total + pos;
+                    //cout<<"pos: "<<pos<< " cell: "<< cell<<endl;
+                    int num_points = 0;
+                    if ( mr != CMMESPA) {
+                        num_points = get_peaks_and_troughs1(sd, cl, cell, time_start, crit_points, type, position, mr);
+                        //cout<<"number of points: "<<num_points<<endl;
+                    } else {
+                        
+                        num_points = get_peaks_and_troughs2(sd, cl, cell, time_start, crit_points, type, position, mr, mh1_comp, mespa_comp, mespb_comp);  // 151221: get_peaks_and_troughs2 records the concentration value of mh1, mespa and mespb and store them in mh1_comp, mespa_comp, mespb_comp
+                        comp_score_a+=test_compl(sd, mh1_comp, mespa_comp);
+                        comp_score_b+=test_compl(sd, mh1_comp, mespb_comp);
+                        //cout<< "num_points: "<< num_points<<endl;
+
+                    } 
+                                    double periods[num_points];
+                    double per_pos[num_points];
+                    double per_time[num_points];
+                    double amplitudes[num_points];
+                    double amp_pos[num_points];
+                    
+                    memset(periods, 0, sizeof(double) * num_points);
+                    memset(amplitudes, 0, sizeof(double) * num_points);
+                    memset(per_pos, 0, sizeof(double) * num_points);
+                    memset(amp_pos, 0, sizeof(double) * num_points);
+                    
+                    int pers = 0;
+                    int amps = 0;
+                    if (num_points >= 3) { 
+                        // Calculate all the periods and amplitudes
+                        
+                        // Find the first peak and the first trough occurring in the graph
+                        int cur_point = 0;
+                        //cout<<"num_points: "<< num_points<<endl;
+                        //cout<<"start: "<<cell << " ";
+                        for (; cur_point < num_points; cur_point++) {		
+                            // Check for period
+                            if (type[cur_point] == 1 && cur_point >= 2) {
+                                periods[pers] = (crit_points[cur_point] - crit_points[cur_point - 2]) * sd.step_size * sd.big_gran;
+                                per_pos[pers] = position[cur_point - 2] + (position[cur_point] - position[cur_point - 2]) / 2;
+                                //if (index==IMMESPB){cout<< periods[pers]<<" "<<per_pos[pers]<<" ";}
+                                per_time[pers] = (crit_points[cur_point] - crit_points[cur_point - 2]) / 2 * sd.step_size * sd.big_gran;
+                                pers++;
+                            }
+                        }
+                        
+                        //cout<<"pers: "<<pers<< "  amps: "<<amps<<endl;
+                        bool passed = true;
+                        
+                        //last period
+                        double last_period=0;
+                        if (type[num_points-1]==1) {
+                           last_period = (crit_points[num_points-1]-crit_points[num_points-3])*sd.step_size*sd.big_gran;
+                        }
+                        else{
+                           last_period = (crit_points[num_points-2]-crit_points[num_points-4])*sd.step_size*sd.big_gran;
+                        }
+                        
+                        //if (index==IMH1){cout<<"last period: "<< last_period<< endl;}
+                        
+                        double giuratio= last_period/  md.feat.period_post;
+                        if (giuratio< 1.4 || giuratio> 2.2) {
+                            passed=false;
+                        }
+                        
+                        
+                        if (passed && mr == CMH1) {
+                            num_cells_passed++;
+                        }
+                        period_avg += (periods[0]);
+                    } else {
+                        
+                        period_avg+= (period_avg < INFINITY ? INFINITY : 0);;
+                    }
+                    // Printing to files for the anterior features
+                    if (ip.ant_features) {
+                        for (int j = 0; j < pers; j++) {
+                            features_files[PERIOD] << per_pos[j] << ",";
+                        }
+                        features_files[PERIOD] << endl;
+                        for (int j = 0; j < pers; j++) {
+                            features_files[PERIOD] << periods[j] << ",";
+                        }
+                        features_files[PERIOD] << endl;
+                        for (int j = 0; j < amps; j++) {
+                            features_files[AMPLITUDE] << amp_pos[j] << ",";
+                        }
+                        features_files[AMPLITUDE] << endl;
+                        for (int j = 0; j < amps; j++) {
+                            features_files[AMPLITUDE] << amplitudes[j] << ",";
+                        }
+                        features_files[AMPLITUDE] << endl;
+                    }
+
+                    
+                    // Updating mutant data
+                    /*
+                    for (int j = 0; j < pers; j++) {                                                    // 151221: may be unused
+                        if (per_time[j] >= anterior_time(sd, md.induction)) {
+                            double half_hour_index = 0.5 * (((int)(per_time[j] - anterior_time(sd, md.induction)) * sd.big_gran / 3000) + 1);
+                            if (per_pos[j] < sd.width_initial) {
+                                md.feat.period_post_time[index][half_hour_index] = periods[j];   //JY WT.2.
+                            } else {
+                                md.feat.period_ant_time[index][half_hour_index] = periods[j];    
+                            }
+                        }
+                    }
+                    */
+
+                    type.reset(sd.steps_total / (20/sd.step_size));
+                    crit_points.reset(sd.steps_total / (20/sd.step_size));
+                }		
+                time_start += sd.steps_split / sd.big_gran; // skip in time until a new column of cells has been formed
+            }
+            if (ip.ant_features) {
+                features_files[PERIOD].close();
+                features_files[AMPLITUDE].close();
+            }
+
+            
+            period_avg /= (end_line - start_line) * (end_col - start_col);
+            
+            
+            
+            
+            //cout<<"period ant: "<<period_avg<<endl;
+            //md.feat.period_ant[index] = period_avg;
+            
+            if (index == IMH1) {
+                int threshold = 0.7 * (end_line - start_line) * (end_col - start_col); // 151221: originally 80%, now changed to 70%
+                cout<<num_cells_passed<<endl;
+                md.conds_passed[SEC_ANT][0] = (num_cells_passed >= threshold);
+            }
+            if (index == IMMESPA) {
+                md.feat.comp_score_ant_mespa = comp_score_a / num_cell;
+                md.feat.comp_score_ant_mespb = comp_score_b / num_cell;
+            }
+		}
 		
-		for (int col = start_col; col < end_col; col++) {						
-			for (int line = start_line; line < end_line; line++) {
-				int pos = cl.active_start_record[time_start]; // always looking at cell at position active_start because that is the newest cell
-				int cell = line * sd.width_total + pos;
-				int num_points = 0;
-                if ( mr != CMMESPA) {
-				    num_points = get_peaks_and_troughs1(sd, cl, cell, time_start, crit_points, type, position, mr);
-                } else {
-					
-					num_points = get_peaks_and_troughs2(sd, cl, cell, time_start, crit_points, type, position, mr, mh1_comp, mespa_comp, mespb_comp);  // 151221: get_peaks_and_troughs2 records the concentration value of mh1, mespa and mespb and store them in mh1_comp, mespa_comp, mespb_comp
-					comp_score_a+=test_compl(sd, mh1_comp, mespa_comp);
-					comp_score_b+=test_compl(sd, mh1_comp, mespb_comp);
-				} 
-			
-				double periods[num_points];
-				double per_pos[num_points];
-                double per_time[num_points];
-				double amplitudes[num_points];
-				double amp_pos[num_points];
-                //double amp_time[num_points]; // amp_time is not used in the new calculation methods
-				memset(periods, 0, sizeof(double) * num_points);
-				memset(amplitudes, 0, sizeof(double) * num_points);
-				memset(per_pos, 0, sizeof(double) * num_points);
-				memset(amp_pos, 0, sizeof(double) * num_points);
-
-				int pers = 0;
-				int amps = 0;
-				if (num_points >= 3) { 
-					// Calculate all the periods and amplitudes
-					
- 					// Find the first peak and the first trough occurring in the graph
-					int cur_point = 0;
-					
-					for (; cur_point < num_points; cur_point++) {		
-						// Check for period
-						if (type[cur_point] == 1 && cur_point >= 2) {
-							periods[pers] = (crit_points[cur_point] - crit_points[cur_point - 2]) * sd.step_size * sd.big_gran;
-							per_pos[pers] = position[cur_point - 2] + (position[cur_point] - position[cur_point - 2]) / 2;
-                            per_time[pers] = (crit_points[cur_point] - crit_points[cur_point - 2]) / 2 * sd.step_size * sd.big_gran;
-							pers++;
-						}
-						
-						// Check for amplitude
-						if (type[cur_point] == 1 && cur_point >= 1 && cur_point < num_points - 1) {
-							amplitudes[amps] = conc[crit_points[cur_point]][cell] - (conc[crit_points[cur_point - 1]][cell] + conc[crit_points[cur_point + 1]][cell]) / 2;
-							amp_pos[amps] = position[cur_point];
-                            //amp_time[amps] = crit_points[cur_point];
-							amps++;
-						}
-					}
-					
-					bool passed = true;
-					// Try to fit out period data to the curve provided by Giudicelli et al.
-					if (pers < 3) { // If we don't have at least 3 data points then the oscillations were not good enough
-						passed = false;
-					} else {
-						int first_fit = per_pos[0] * 100 / (sd.width_total - 1); // Find the place on the curve of the first period for comparison purposes
-						//if (mr == CMH1){cout<<1<<" "<<1<<endl;}
-						for (int i = 1; i < pers; i++) {
-							if (per_pos[i] > 0.85 * (sd.width_total - 1)) {
- 								break;
- 							}
-
-							int percentage = per_pos[i] * 100 / (sd.width_total - 1); // Find the place on the curve of the current period
-							double ratio = periods[i] / periods[0]; // The ratio between the current period and the first period
-							//if (mr==CMH1){cout<<ratio<<" "<<curve[percentage] / curve[first_fit]<<endl;}
-							if (!( (0.9 * curve[percentage] / curve[first_fit]) < ratio && ratio < (1.1 * curve[percentage] / curve[first_fit]))) {   //JY WT.2. checking every period for every cell
-								passed = false;
-								break;
-							}
-						}
-					}
-					if (passed && mr == CMH1) {
-						num_cells_passed++;
-					}
-					
-					// the amplitude is the average of the amplitudes of all oscillations
-
-					double amp_cell = 0;
-					for (int i = 0; i < amps; i++) {
-						amp_cell += amplitudes[i];
-					}
-					//double period_cell = 0;
-					//int rang = (int)(0.85 * pers);
-					//int count = 0;
-					/*for (; rang < pers; rang++) {
-						period_cell += periods[rang];
-						count++;
-					}*/
-					
-					if (amps == 0){
-						amp_avg+=0;
-					} else {
-						amp_avg += amp_cell / (amps);
-					}
-					period_avg += (periods[0]);
-				} else {
-					amp_avg += 1;
-					period_avg += 1;
-				}
-                // Printing to files for the anterior features
-				if (ip.ant_features) {
-					for (int j = 0; j < pers; j++) {
-						features_files[PERIOD] << per_pos[j] << ",";
-					}
-					features_files[PERIOD] << endl;
-					for (int j = 0; j < pers; j++) {
-						features_files[PERIOD] << periods[j] << ",";
-					}
-					features_files[PERIOD] << endl;
-					for (int j = 0; j < amps; j++) {
-						features_files[AMPLITUDE] << amp_pos[j] << ",";
-					}
-					features_files[AMPLITUDE] << endl;
-					for (int j = 0; j < amps; j++) {
-						features_files[AMPLITUDE] << amplitudes[j] << ",";
-					}
-					features_files[AMPLITUDE] << endl;
-				}
-
-                // Updating mutant data
-                for (int j = 0; j < pers; j++) {                                                    // 151221: may be unused
-					if (per_time[j] >= anterior_time(sd, md.induction)) {
-                    	double half_hour_index = 0.5 * (((int)(per_time[j] - anterior_time(sd, md.induction)) * sd.big_gran / 3000) + 1);
-                   		if (per_pos[j] < sd.width_initial) {
-                   		    md.feat.period_post_time[index][half_hour_index] = periods[j];   //JY WT.2.
-                    	} else {
-                    	    md.feat.period_ant_time[index][half_hour_index] = periods[j];    
-                    	}
-					}
+		if (md.index == MUTANT_WILDTYPE) {
+            
+            //condition wildtype sync score
+            if (index == 0) { //only measure her1
+                int time_600 = anterior_time(sd,(600/sd.step_size));
+                int time_600_end = anterior_time(sd,(600+30)/sd.step_size);
+                for (; time_600 < time_600_end; time_600+= 6/sd.step_size){
+                    md.feat.sync_score_ant[IMH1]+=ant_sync(sd,cl,CMH1, time_600);                  //WT 4
+                    md.feat.amplitude_ant_time[IMH1][0]+=amp_10(sd, cl, CMH1, time_600);           //delta 2 comparison
                 }
-               /* for (int j = 0; j < amps; j++) {
-					if (amp_time[j] >= anterior_time(sd, md.induction)) {
-                    	double half_hour_index = 0.5 * ((int)((amp_time[j] - anterior_time(sd, md.induction)) * sd.big_gran / 3000) + 1);
-                    	if (per_pos[j] < sd.width_initial) {
-                    	    md.feat.amplitude_post_time[index][half_hour_index] = amplitudes[j];
-                    	} else {
-                    	    md.feat.amplitude_ant_time[index][half_hour_index] = amplitudes[j];
-                    	}
-					}
-                }*/
 
-				type.reset(sd.steps_total / (20/sd.step_size));
-				crit_points.reset(sd.steps_total / (20/sd.step_size));
-			}		
-			time_start += sd.steps_split / sd.big_gran; // skip in time until a new column of cells has been formed
-		}
-		if (ip.ant_features) {
-			features_files[PERIOD].close();
-			features_files[AMPLITUDE].close();
-		}
-
-		amp_avg /= (end_line - start_line) * (end_col - start_col);
-		period_avg /= (end_line - start_line) * (end_col - start_col);
-		md.feat.period_post[index]=period_avg;
-		
-		
-        md.feat.period_ant[index] = period_avg;
-		md.feat.amplitude_ant[index] = amp_avg;  //JY WT.3.  take average of all amplitude for all cell
-		if (md.index == MUTANT_WILDTYPE && mr == CMH1) {
-			int threshold = 0.7 * (end_line - start_line) * (end_col - start_col); // 151221: originally 80%, now changed to 70%
-			md.conds_passed[SEC_ANT][0] = (num_cells_passed >= threshold);
-		}
-		
-		if (md.index == MUTANT_WILDTYPE) {                              //151221: calculate oscillation features for wildtype, including posterior amplitude, anterior amplitude and syncrony score for different species
-			
-			int time_half = anterior_time(sd,(600+30)/sd.step_size);         //half hours after induction, 10 snapshot in 30 minutes
-			int time_half_end = anterior_time(sd,(600+60)/sd.step_size);
-			for (;time_half<time_half_end; time_half+=(3/sd.step_size)){
-				md.feat.amplitude_post_time[index][0.5]+=avg_amp(sd,cl,index+1,time_half, 0, sd.width_initial);
-				md.feat.amplitude_ant_time[index][0.5]+=avg_amp(sd,cl,index+1,time_half, 0.6*sd.width_total, sd.width_total);
-				md.feat.amplitude_post[index] +=  avg_amp(sd,cl,index+1,time_half, 0, sd.width_initial);
-				//md.feat.sync_score_post[index]+=post_sync(sd,cl, index + 1, time_half);
-				md.feat.sync_score_ant[index]+= ant_sync(sd, cl, index + 1, time_half);
+                int time_630 = anterior_time(sd,(630/sd.step_size));
+                int time_630_end = anterior_time(sd,(660)/sd.step_size);
+                for (; time_630 < time_630_end; time_630+= 6/sd.step_size){
+                    md.feat.amplitude_ant_time[IMH1][1]+=amp_10(sd, cl, CMH1, time_630);           //her1over 1 comparison
+                    md.feat.amplitude_ant_time[IMDELTA][1]+=amp_10(sd, cl, CMDELTA, time_630);      //her1over 2 comparison
+                    md.feat.amplitude_ant_time[IMMESPA][1]+=amp_10(sd, cl, CMMESPA, time_630);      //her1over 3 comparison
+                    
+                }
+                
+                int time_three = anterior_time(sd, (840)/sd.step_size);
+                int time_three_end = anterior_time(sd, (870)/sd.step_size);
+                for (;time_three<time_three_end; time_three+=(6/sd.step_size)){
+                    md.feat.amplitude_ant_time[IMH1][2]+=amp_10(sd, cl, CMH1, time_three);         //DAPT 2 comparison
+                }
+                
+                md.feat.sync_score_ant[IMH1]/=5;
+                md.feat.amplitude_ant_time[IMH1][0]/=5;
+                md.feat.amplitude_ant_time[IMH1][1]/=5;
+                md.feat.amplitude_ant_time[IMDELTA][1]/=5;
+                md.feat.amplitude_ant_time[IMMESPA][1]/=5;
+                //cout<<"HER1OVER "<<md.feat.amplitude_ant_time[index][1]<< " "<<md.feat.amplitude_ant_time[IMDELTA][1]<< " "<< md.feat.amplitude_ant_time[IMMESPA][1]<<endl;
+                md.feat.amplitude_ant_time[IMH1][2]/=5;
+            }
+            
+             
+			if (index == 2 || index ==1){
+                //complementray score of mespa and mespb
+                //for WT calculations
+                int time_600 = anterior_time(sd,(600/sd.step_size));
+                int time_600_end = anterior_time(sd,(600+30)/sd.step_size);
+                for (; time_600 < time_600_end; time_600+= 6/sd.step_size){
+                    md.feat.sync_score_ant[index]+=mesp_sync(sd,cl,index+1, time_600);
+                }
+                md.feat.sync_score_ant[index]/=5;
+                //cout<<"COMP SCORE: "<< index<< " "<<md.feat.sync_score_ant[index]<<endl;
+                
+                
 			}
-			
-			//md.feat.sync_score_post[index]/=10;
-			md.feat.sync_score_ant[index]/=10;
-			if (index == 0) {
-				int time_three = anterior_time(sd, (600+180)/sd.step_size);          //three hours after induction, 10 snapshot in 30 minutes
-				int time_three_end = anterior_time(sd, (600+210)/sd.step_size);
-				for (;time_three<time_three_end; time_three+=(3/sd.step_size)){
-					md.feat.amplitude_post_time[index][3]+= avg_amp(sd,cl,index+1,time_three, 0, sd.width_total);
-					//md.feat.amplitude_ant_time[index][3]+=avg_amp(sd,cl,index+1,time_three, 0.6*sd.width_total, sd.width_total);
-				}
-
-			}
-
-			if (index == 2 || index ==3){
-				int time_one = anterior_time(sd, (600+60)/sd.step_size);             //one hour after induction, 10 snapshot in 30 minutes
-				int time_one_end = anterior_time(sd, (600+90)/sd.step_size);
-				for (;time_one<time_one_end; time_one+=(3/sd.step_size)){
-					
-					md.feat.amplitude_ant_time[index][1]+=avg_amp(sd,cl,index+1,time_one, 0.6*sd.width_total, sd.width_total);
-				}
-
-				int time_two = anterior_time(sd, (600+120)/sd.step_size);            //two hours after induction, 10 snapshot in 30 minutes
-				int time_two_end = anterior_time(sd, (600+150)/sd.step_size);            
-				for (;time_two<time_two_end; time_two+=(3/sd.step_size)){
-					
-					md.feat.amplitude_ant_time[index][2]+= avg_amp(sd,cl,index+1,time_two, 0.6*sd.width_total, sd.width_total);
-				}
-			}
-
+            if (index ==1){//mespa
+                int time_600 = anterior_time(sd,(600/sd.step_size));
+                int time_600_end = anterior_time(sd,(600+30)/sd.step_size);
+                for (; time_600 < time_600_end; time_600+= 6/sd.step_size){
+                    md.feat.amplitude_ant_time[IMDELTA][0]+=amp_10(sd, cl, CMMESPA, time_600);            //delta 4 comparison, using amplitude_ant_time[delta][0] to save space
+                    md.feat.sync_score_ant[IMDELTA]+= ant_sync(sd, cl, CMMESPB, time_600);          //put wt mespb sync in delta since sync mespa/b are used for 2nd comp scores
+                }
+                
+                int time_two = anterior_time(sd, (720)/sd.step_size);
+                int time_two_end = anterior_time(sd, (750)/sd.step_size);
+                for (;time_two<time_two_end; time_two+=(6/sd.step_size)){
+                    md.feat.amplitude_ant_time[IMMESPA][2]+=amp_10(sd, cl, CMMESPA, time_two);    //DAPT 3 comparison
+                }
+                
+                int time_660 = anterior_time(sd,(660/sd.step_size));
+                int time_660_end = anterior_time(sd,(690)/sd.step_size);
+                for (; time_660 < time_660_end; time_660+= 6/sd.step_size){
+                    md.feat.amplitude_ant_time[IMMESPB][0]+=amp_10(sd, cl, CMMESPB, time_660);            //MESP  comparison
+                    md.feat.amplitude_ant_time[IMMESPA][0]+=amp_10(sd, cl, CMMESPA, time_660);            //MESP  comparison
+                }
+                md.feat.amplitude_ant_time[IMMESPB][0]/=5;
+                md.feat.amplitude_ant_time[IMMESPA][0]/=5;
+                md.feat.amplitude_ant_time[IMMESPA][2]/=5;
+                md.feat.sync_score_ant[IMDELTA]/=5;
+                cout<<"WT MESPB SNYC: "<<md.feat.sync_score_ant[IMDELTA]<<endl;
+                //cout<<"MUTANT MESPA: "<<md.feat.amplitude_ant_time[IMMESPB][0]<<endl;
+                //cout<< " DAPTA_MESPA wt: "<<md.feat.amplitude_ant_time[index][2]<<endl;
+                md.feat.amplitude_ant_time[IMDELTA][0]/=5;
+                
+            }
+      
 		}
 
-		if (md.index==MUTANT_DELTA){  //151221: calculate oscillation features for delta mutant, including posterior amplitude, anterior amplitude and syncrony score for different species
-						
-
-
-			if (index==2){
-				
-				int time_half = anterior_time(sd,(600+30)/sd.step_size);         //half hours after induction, 10 snapshot in 30 minutes
-				int time_half_end = anterior_time(sd,(600+60)/sd.step_size);
-				for (;time_half<time_half_end; time_half+=(3/sd.step_size)){
-					md.feat.sync_score_ant[0]+=ant_sync(sd, cl, 0 + 1, time_half);
-					md.feat.sync_score_ant[3]+=ant_sync(sd, cl, 3 + 1, time_half);
-					//md.feat.sync_score_post[0]+=post_sync(sd,cl, 0 + 1, time_half);
-					md.feat.amplitude_post[0] +=  avg_amp(sd,cl,0+1,time_half, 0, sd.width_initial);
-					md.feat.amplitude_ant_time[index][0.5]+=avg_amp(sd,cl,index+1,time_half, 0.6*sd.width_total, sd.width_total);
+		if (md.index==MUTANT_DELTA){
+            if (index==0) {
+				int time_600 = anterior_time(sd,(600/sd.step_size));
+				int time_600_end = anterior_time(sd,(630/sd.step_size));
+                for (;time_600<time_600_end; time_600+=(6/sd.step_size)){
+                    md.feat.sync_score_ant[IMH1]+=ant_sync(sd, cl, CMH1, time_600);             //delta 3
+                    md.feat.sync_score_ant[IMMESPB]+= ant_sync(sd, cl, CMMESPB, time_600);        //delta 5
+                    md.feat.amplitude_ant_time[IMH1][0]+=amp_10(sd, cl, CMH1, time_600);                //delta 2
+                    md.feat.amplitude_ant_time[IMDELTA][0]+= amp_10(sd, cl, CMMESPA, time_600);         //delta 4   **using amplitude_ant_time[delta][0] to save space
 				}
-				
-				
-				md.feat.sync_score_ant[0]/=10;
-				md.feat.sync_score_ant[3]/=10;
-				//md.feat.sync_score_post[0]/=10;
-			}
-
+                md.feat.amplitude_ant_time[IMDELTA][0]/=5;
+				md.feat.amplitude_ant_time[IMH1][0]/=5;
+                md.feat.sync_score_ant[IMH1]/=5;
+				md.feat.sync_score_ant[IMMESPB]/=5;
+    
+                //cout<<"DELTA: "<<md.feat.sync_score_ant[IMH1]<<" "<<md.feat.sync_score_ant[IMMESPB]<<endl;
+            }
 			
 		}
 
-		if (md.index==MUTANT_HER7OVER){    //calculate oscillation features for her7-overexpression mutant, including posterior amplitude, anterior amplitude and syncrony score for different species
-
-			if (index == 0 || index ==5){
-				int time_half = anterior_time(sd,(600+30)/sd.step_size);                    //half hours after induction, 10 snapshot in 30 minutes
-				int time_half_end = anterior_time(sd,(600+60)/sd.step_size);
-				for (;time_half<time_half_end; time_half+=(3/sd.step_size)){
-					md.feat.amplitude_post_time[index][0.5]+=avg_amp(sd,cl,index+1,time_half, 0, sd.width_initial);
-					
-				}
-			}
-
-			if (index == 0 || index ==2){
-				int time_half = anterior_time(sd,(600+30)/sd.step_size);                       //half hours after induction, 10 snapshot in 30 minutes
-				int time_half_end = anterior_time(sd,(600+60)/sd.step_size);
-				for (;time_half<time_half_end; time_half+=(3/sd.step_size)){
-					//cout<<md.feat.amplitude_ant_time[0][0.5]<<endl;
-					md.feat.amplitude_ant_time[index][0.5]+=avg_amp(sd,cl,index+1,time_half, 0.6*sd.width_total, sd.width_total);
-				}
-			}
-
-			if (index == 3) {
-				int time_onehalf = anterior_time(sd,(600+90)/sd.step_size);                 //one and a half hours after induction, 10 snapshot in 30 minutes
-				int time_onehalf_end = anterior_time(sd,(600+120)/sd.step_size);
-				for (;time_onehalf<time_onehalf_end; time_onehalf+=(3/sd.step_size)){
-					md.feat.sync_time[index][1.5]+=ant_sync(sd, cl, index + 1, time_onehalf);
-					
-				}
-				md.feat.sync_time[index][1.5]/=10;
-			}
+		if (md.index==MUTANT_HER1OVER){
+			if (index == 0 ){
+                int time_630 = anterior_time(sd,(630/sd.step_size));
+                int time_630_end = anterior_time(sd,(660)/sd.step_size);
+                for (; time_630 < time_630_end; time_630+= 6/sd.step_size){
+                    md.feat.amplitude_ant_time[IMH1][1]+=amp_10(sd, cl, CMH1, time_630);        //her1over 1
+                    md.feat.amplitude_ant_time[IMDELTA][1]+=amp_10(sd, cl, CMDELTA, time_630);  //her1over 2
+                    md.feat.amplitude_ant_time[IMMESPA][1]+=amp_10(sd, cl, CMMESPA, time_630);  //her1over 3
+                }
+                md.feat.amplitude_ant_time[IMH1][1]/=5;
+                md.feat.amplitude_ant_time[IMDELTA][1]/=5;
+                md.feat.amplitude_ant_time[IMMESPA][1]/=5;
+                //cout<<"HER1OVER2 "<<md.feat.amplitude_ant_time[index][1]<< " "<<md.feat.amplitude_ant_time[IMDELTA][1]<< " "<< md.feat.amplitude_ant_time[IMMESPA][1]<<endl;
+            }
+            
+            if (index ==2){
+                int time_690 = anterior_time(sd,(690/sd.step_size));
+                int time_690_end = anterior_time(sd,(720)/sd.step_size);
+                for (; time_690 < time_690_end; time_690+= 6/sd.step_size){
+                    md.feat.sync_score_ant[IMMESPB]+=ant_sync(sd, cl, IMMESPB, time_690);      //her1over 4
+                }
+                md.feat.sync_score_ant[IMMESPB]/=5;
+            }
 		}
 
-		if (md.index==MUTANT_HER1OVER){       //calculate oscillation features for her1-overexpression mutant, including posterior amplitude, anterior amplitude and syncrony score for different species
-			if (index == 1 || index ==5){
-				int time_half = anterior_time(sd,(600+30)/sd.step_size);           //half hours after induction, 10 snapshot in 30 minutes
-				int time_half_end = anterior_time(sd,(600+60)/sd.step_size);
-				for (;time_half<time_half_end; time_half+=(3/sd.step_size)){
-					md.feat.amplitude_post_time[index][0.5]+=avg_amp(sd,cl,index+1,time_half, 0, sd.width_initial);
-					md.feat.amplitude_ant_time[index][0.5]+=avg_amp(sd,cl,index+1,time_half, 0.6*sd.width_total, sd.width_total);
-				}
-			}
-		}
-
-		if (md.index==MUTANT_DAPT){                       //calculate oscillation features for dapt mutant, including posterior amplitude, anterior amplitude and syncrony score for different species
+		if (md.index==MUTANT_DAPT){
 			if (index == 0){
-				int time_three = anterior_time(sd, (600+180)/sd.step_size);          //three hours after induction, 10 snapshot in 30 minutes
-				int time_three_end = anterior_time(sd, (600+210)/sd.step_size);
-				for (;time_three<time_three_end; time_three+=(3/sd.step_size)){
-					md.feat.amplitude_post_time[index][3]+=avg_amp(sd,cl,index+1,time_three, 0, sd.width_total);
-					md.feat.sync_time[index][3]+=ant_sync(sd, cl, index + 1, time_three);
-					//md.feat.amplitude_ant_time[index][3]+=avg_amp(sd,cl,index+1,time_three, 0.6*sd.width_total, sd.width_total);
+				int time_three = anterior_time(sd, (840)/sd.step_size);
+                int time_three_end = anterior_time(sd, (870)/sd.step_size);
+				for (;time_three<time_three_end; time_three+=(6/sd.step_size)){
+					md.feat.amplitude_ant_time[IMH1][2]+=amp_10(sd, cl, CMH1, time_three);   //DAPT 2
+					md.feat.sync_score_ant[IMH1]+=ant_sync(sd, cl, CMH1, time_three);     //DAPT 1
+                    md.feat.sync_score_ant[IMMESPB]+= ant_sync(sd, cl, CMMESPB, time_three);
 				}
-
-				
-				md.feat.sync_time[index][3]/=10;
+                md.feat.amplitude_ant_time[IMH1][2]/=5;
+				md.feat.sync_score_ant[IMH1]/=5;
+                md.feat.sync_score_ant[IMMESPB]/=5;
 			}
 
-			if (index==2) {
-				int time_two = anterior_time(sd, (600+120)/sd.step_size);         //two hours after induction, 10 snapshot in 30 minutes
-				int time_two_end = anterior_time(sd, (600+150)/sd.step_size);
-				for (;time_two<time_two_end; time_two+=(3/sd.step_size)){
-					
-					md.feat.amplitude_ant_time[index][2]+=avg_amp(sd,cl,index+1,time_two, 0.6*sd.width_total, sd.width_total);
+			if (index==1) {
+				int time_two = anterior_time(sd, (720)/sd.step_size);
+				int time_two_end = anterior_time(sd, (750)/sd.step_size);
+				for (;time_two<time_two_end; time_two+=(6/sd.step_size)){
+					md.feat.amplitude_ant_time[IMMESPA][2]+=amp_10(sd, cl, CMMESPA, time_two);    //DAPT 3
 				}
+                md.feat.amplitude_ant_time[IMMESPA][2]/=5;
+                //cout<< " DAPTA_MESPA mutant: "<<md.feat.amplitude_ant_time[index][2]<<endl;
 			}
 
-			if (index==3) {
-				int time_three = anterior_time(sd, (600+180)/sd.step_size);        //three hours after induction, 10 snapshot in 30 minutes
-				int time_three_end = anterior_time(sd, (600+210)/sd.step_size);
-				for (;time_three<time_three_end; time_three+=(3/sd.step_size)){
-					md.feat.sync_time[index][3]+=ant_sync(sd, cl, index + 1, time_three);
-				}
-				md.feat.sync_time[index][3]/=10;
-			}
-		}
+        }
 
 		if (md.index==MUTANT_MESPAOVER){                     //calculate oscillation features for mespa mutant, including posterior amplitude, anterior amplitude and syncrony score for different species
 			if (index==3){
-				int time_one = anterior_time(sd, (600+60)/sd.step_size);         //one hour after induction, 10 snapshot in 30 minutes
-				int time_one_end = anterior_time(sd, (600+90)/sd.step_size);
-				for (;time_one<time_one_end; time_one+=(3/sd.step_size)){
+				int time_660 = anterior_time(sd, (660)/sd.step_size);         //one hour after induction, 10 snapshot in 30 minutes
+				int time_660_end = anterior_time(sd, (690)/sd.step_size);
+				for (;time_660<time_660_end; time_660+=(6/sd.step_size)){
 					
-					md.feat.amplitude_ant_time[index][1]+=avg_amp(sd,cl,index+1,time_one, 0.6*sd.width_total, sd.width_total);
+					md.feat.amplitude_ant_time[IMMESPB][0]+= amp_10(sd, cl, CMMESPB, time_660);
 				}
+                md.feat.amplitude_ant_time[IMMESPB][0]/=5;
+                //cout<<"MUTANT MESPA: "<<md.feat.amplitude_ant_time[IMMESPB][0]<<endl;
 			}
 		}
 		
 		if (md.index==MUTANT_MESPBOVER){                    //calculate oscillation features for mespb mutant, including posterior amplitude, anterior amplitude and syncrony score for different species
-			if (index==2 || index == 3){
-				int time_one = anterior_time(sd, (600+60)/sd.step_size);            //one hours after induction, 10 snapshot in 30 minutes
-				int time_one_end = anterior_time(sd, (600+90)/sd.step_size);
-				for (;time_one<time_one_end; time_one+=(3/sd.step_size)){
-					
-					md.feat.amplitude_ant_time[index][1]+=avg_amp(sd,cl,index+1,time_one, 0.6*sd.width_total, sd.width_total);
-				}
+			if (index==2 ){
+                int time_660 = anterior_time(sd, (660)/sd.step_size);         //one hour after induction, 10 snapshot in 30 minutes
+                int time_660_end = anterior_time(sd, (690)/sd.step_size);
+                for (;time_660<time_660_end; time_660+=(6/sd.step_size)){
+                    md.feat.amplitude_ant_time[IMMESPA][0]+= amp_10(sd, cl, CMMESPA, time_660);
+                    md.feat.amplitude_ant_time[IMMESPB][0]+= amp_10(sd, cl, CMMESPB, time_660);
+                }
+                md.feat.amplitude_ant_time[IMMESPB][0]/=5;
+                md.feat.amplitude_ant_time[IMMESPA][0]/=5;
+                //cout<<"MUTANT MESPB: "<<md.feat.amplitude_ant_time[IMMESPB][0]<<endl;
+                //cout<<"MUTANT MESPB: "<<md.feat.amplitude_ant_time[IMMESPA][0]<<endl;
 			}
 		}
 
-		// for sync take 5 snapshots and average sync scores and count waves of mespa and mespb	for wildtype
-		/*double sync_avg = 0;
-	    int time_full = anterior_time(sd, sd.steps_til_growth + (sd.width_total - sd.width_initial - 1) * sd.steps_split);
-	    for (int time = time_full; time < sd.time_end; time += (sd.time_end - 1 - time_full) / 4) {
-		    sync_avg += ant_sync(sd, cl, index + 1, time);
-			if (md.index == MUTANT_WILDTYPE) {  // wildtype
-				wave_testing_mesp(sd, cl, md, time, sd.active_start);
-			}
-	    }
 
-	    md.feat.sync_score_ant[index] = sync_avg / 5;
-        if (md.induction != 0) {
-            int time_after_induction = anterior_time(sd, md.induction + 3000 / sd.big_gran);
-            for (int i = 0; i < 5; i++) {
-                int mr = con[i];
-                double half_hour_index = 0.5;
-                for (int time = time_after_induction; time < sd.time_end; time += (3000 / sd.big_gran)) {
-                    md.feat.sync_time[ind[i]][half_hour_index] = ant_sync(sd, cl, mr, time);
-                    half_hour_index += 0.5;
-                }
-            }
-        }*/
 		if (ip.ant_features) {
 			int time_start = anterior_time(sd, sd.steps_til_growth + (sd.width_total - sd.width_initial - 1) * sd.steps_split);
 			for (int col = start_col; col < end_col; col++) {
@@ -588,174 +554,217 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 			}
 			features_files[SYNC].close();
 		}
-		if (index == IMMESPA) { //151221: complementary score for mespa and mespb
-			// for complementary mesp expression take 6 snapshots and average comp score
-			//double num = 0;
-			
-			
-		    //int time_full = anterior_time(sd, sd.steps_til_growth + (sd.width_total - sd.width_initial - 1) * sd.steps_split + 9000);
-			/*for ( int time= time_full; time < time_full + 3000; time += 600) { // have 6 minutes in between snapshots
-                //md.feat.comp_score_ant_mespa += test_complementary(sd, cl, time, CMH1, CMMESPA);
-				
-                md.feat.comp_score_ant_mespb += test_complementary(sd, cl, time, CMH1, CMMESPB);
-				num += 1;
-			}*/
-			//cout<<md.feat.comp_score_ant_mespa<<endl;
-			
-			md.feat.comp_score_ant_mespa = comp_score_a / num_cell;
-            md.feat.comp_score_ant_mespb = comp_score_b / num_cell;
-			
-		} 
+		
 		//md.feat.sync_score_ant[index] = sync_avg / 5; // JY bug?
 	}
+    
 	mfree(str_set_num);
+    
 }
 
-void osc_features_post (sim_data& sd, input_params& ip, con_levels& cl, features& feat, features& wtfeat, char* filename_feats, int start, int end, int set_num) {   //151221:  we are only using the this for the peaktotrough condition in wildtype mutant. maybe you can delete some unnecessary lines
+void osc_features_post (sim_data& sd, input_params& ip, con_levels& cl, features& feat, features& wtfeat, mutant_data& md, char* filename_feats, int start, int end, int set_num) {   //151221:  we are only using the this for the peaktotrough condition in wildtype mutant. maybe you can delete some unnecessary lines
 	/*
 	 Calculates the oscillation features: period, amplitude, and peak to trough ratio for a set of concentration levels.
 	 The values are calculated using the last peak and trough of the oscillations, since the amplitude of the first few oscillations can be slightly unstable.
 	 For the wild type, the peak and trough at the middle of the graph are also calculated in order to ensure that the oscillations are sustained.
 	*/
+    if (md.index== MUTANT_WILDTYPE || md.index== MUTANT_DELTA){
+        int strlen_set_num = INT_STRLEN(set_num); // How many bytes the ASCII representation of set_num takes
+        //char* str_set_num = (char*)mallocate(sizeof(char) * (strlen_set_num + 1));
+        char* str_set_num = (char*) mallocate(2);
+        sprintf(str_set_num, "%d", set_num);
 
-	int strlen_set_num = INT_STRLEN(set_num); // How many bytes the ASCII representation of set_num takes
-	//char* str_set_num = (char*)mallocate(sizeof(char) * (strlen_set_num + 1));
-    char* str_set_num = (char*) mallocate(2);
-	sprintf(str_set_num, "%d", set_num);
+        //int con[2] = {CMH1,  CMDELTA};
+        //int ind[2] = {IMH1,  IMDELTA};
+        int con[1] = {CMH1};
+        int ind[1] = {IMH1};
+        static const char* concs[2] = {"mh1", "deltac"};
+        static const char* feat_names[NUM_FEATURES] = {"period", "amplitude", "sync"};
+        ofstream features_files[NUM_FEATURES]; // Array that will hold the files in which to output the period and amplitude
 
-	int con[3] = {CMH1, CMH7, CMDELTA};
-	int ind[3] = {IMH1, IMH7, IMDELTA};
-	static const char* concs[3] = {"mh1", "mh7", "deltac"};
-	static const char* feat_names[NUM_FEATURES] = {"period", "amplitude", "sync"};
-	ofstream features_files[NUM_FEATURES]; // Array that will hold the files in which to output the period and amplitude
+        int num_genes = 1;
+        for (int i = 0; i < num_genes; i++) {
+            if (ip.post_features) {
+                for (int j = 0; j < NUM_FEATURES; j++) {
+                    char* filename = (char*)mallocate(sizeof(char) * strlen(filename_feats) + strlen("set_") + strlen_set_num + 1 + strlen(feat_names[j]) + 1 + strlen(concs[i]) + strlen("_post.feats") + 1);
+                    sprintf(filename, "%sset_%s_%s_%s_post.feats", filename_feats, str_set_num, feat_names[j], concs[i]);
+                    cout << "      ";
+                    open_file(&(features_files[j]), filename, false);
+                    mfree(filename);
+                }
+                
+                features_files[PERIOD] << sd.height << "," << sd.width_initial << endl;
+                features_files[AMPLITUDE] << sd.height << "," << sd.width_initial << endl;
+            }
+        
+            int mr = con[i];
+            int index = ind[i];
 
-	int num_genes = 3;
-	for (int i = 0; i < num_genes; i++) {
-		if (ip.post_features) {
-			for (int j = 0; j < NUM_FEATURES; j++) {
-				char* filename = (char*)mallocate(sizeof(char) * strlen(filename_feats) + strlen("set_") + strlen_set_num + 1 + strlen(feat_names[j]) + 1 + strlen(concs[i]) + strlen("_post.feats") + 1);
-				sprintf(filename, "%sset_%s_%s_%s_post.feats", filename_feats, str_set_num, feat_names[j], concs[i]);
-				cout << "      ";
-				open_file(&(features_files[j]), filename, false);
-				mfree(filename);
-			}
-			
-			features_files[PERIOD] << sd.height << "," << sd.width_initial << endl;
-			features_files[AMPLITUDE] << sd.height << "," << sd.width_initial << endl;
-		}
-	
-		int mr = con[i];
-		int index = ind[i];
+            double period_tot = 0;
+            //double amplitude = 0;
+            double peaktotrough_end = 0;
+            double peaktotrough_mid = 0; 
+            //double num_good_somites = 0;
+            //cout<<"start: "<<start<<endl;
+            for (int x = 0; x < sd.height; x++) {
+                for (int y = 0; y < sd.width_current; y++) {
+                    int cell = x * sd.width_total + y;
+                    growin_array peaks(sd.steps_total / (20/sd.step_size)); 
+                    growin_array troughs(sd.steps_total / (20/sd.step_size));
+                    int num_peaks = 0;
+                    int num_troughs = 0;
+                    int peaks_period = 0;
 
-		double period_tot = 0;
-		double amplitude = 0;
-		double peaktotrough_end = 0;
-		double peaktotrough_mid = 0; 
-		double num_good_somites = 0;
+                    double cell_period = 0;
+                    bool calc_period = true;
+                    concentration_level<double>::timespan conc = cl.cons[mr];
+                    for (int j = start+101; j < end - 1; j++) {
+                        if (abs(num_peaks - num_troughs) > 1) {
+                            num_peaks = 0;
+                            break;
+                        }
 
-		for (int x = 0; x < sd.height; x++) {
-			for (int y = 0; y < sd.width_current; y++) {
-				int cell = x * sd.width_total + y;
-				growin_array peaks(sd.steps_total / (20/sd.step_size)); 
-				growin_array troughs(sd.steps_total / (20/sd.step_size));
-				int num_peaks = 0;
-				int num_troughs = 0;
-				int peaks_period = 0;
+                        //check if the current point is a peak
+                        if (conc[j - 1][cell] < conc[j][cell] && conc[j][cell] > conc[j + 1][cell] ) {
+                            peaks[num_peaks] = j;
+                            num_peaks++;
+                            if (calc_period) {
+                                peaks_period++;
+                            }
+                            
+                            // add the current period to the average calculation
+                            if (num_peaks >= 2 && calc_period) {
+                                double period = (peaks[num_peaks - 1] - peaks[num_peaks - 2]) * sd.step_size * sd.big_gran;
+                                cell_period += period;
+                                //cout<<"period: "<<period<<"  ";
+                                //cout<<"cell_period: "<<cell_period<<endl;
+                                if (num_peaks >= 4) {
+                                    features_files[PERIOD] << period << " ";
+                                }
+                            }
+                        }
+                        
+                        //check if the current point is a trough
+                        if (conc[j - 1][cell] > conc[j][cell] && conc[j][cell] < conc[j + 1][cell]) {
+                            troughs[num_troughs] = j;
+                            num_troughs++;
+                            
+                            /*
+                            //check if the amplitude has dropped under 0.3 of the wildtype amplitude
+                            if (num_troughs >= 2) {
+                                int last_peak = peaks[num_peaks - 1];
+                                int last_trough = troughs[num_troughs - 1];
+                                int sec_last_trough = troughs[num_troughs - 2];
+                                
+                                double first_amp = peaks[1] - (troughs[0] + troughs[1]) / 2;
+                                double cur_amp = conc[last_peak][cell] - (conc[last_trough][cell] + conc[sec_last_trough][cell]) / 2;
+                                if (num_peaks >= 4) {
+                                    features_files[AMPLITUDE] << cur_amp << " ";
+                                }
+                                if (cur_amp < (wtfeat.amplitude_post[mr] > 0 ? 0.3 * wtfeat.amplitude_post[mr] : 0.3 * first_amp)) {
+                                    calc_period = false;
+                                }
+                            }
+                            */
+                        }
+                    }
+                    //cout<<"cell_period_out: "<<cell_period<< "  ";
+                    //cout<<"peaks_period: "<< peaks_period<<endl;
+                    //num_peak = peaks_period, which means we were dividing cell_period by number of peaks, not number of periods
+                    cell_period /= (peaks_period-1);
 
-				double cell_period = 0;
-				bool calc_period = true;
+                    if (num_peaks >= 3) {
+                        int peak_penult = peaks[num_peaks - 2];
+                        int trough_ult = troughs[num_peaks - 2];	
+                        //int trough_penult = troughs[num_peaks - 3];
+                        int peak_mid = peaks[num_peaks / 2];
+                        int trough_mid = troughs[num_peaks / 2];
 
-				double** conc = cl.cons[mr];
-				for (int j = start + 1; j < end - 1; j++) {
-					if (abs(num_peaks - num_troughs) > 1) {
-						num_peaks = 0;
-						break;
-					}
-					
-					//check if the current point is a peak
-					if (conc[j - 1][cell] < conc[j][cell] && conc[j][cell] > conc[j + 1][cell]) {
-						peaks[num_peaks] = j;
-						num_peaks++;
-						if (calc_period) {
-							peaks_period++;
-						}
-						
-						// add the current period to the average calculation
-						if (num_peaks >= 2 && calc_period) {
-							double period = (peaks[num_peaks - 1] - peaks[num_peaks - 2]) * sd.step_size * sd.big_gran;
-							cell_period += period;
-							if (num_peaks >= 4) {
-								features_files[PERIOD] << period << " ";
-							}
-						}
-					}
-					
-					//check if the current point is a trough
-					if (conc[j - 1][cell] > conc[j][cell] && conc[j][cell] < conc[j + 1][cell]) {
-						troughs[num_troughs] = j;
-						num_troughs++;
-						
-						//check if the amplitude has dropped under 0.3 of the wildtype amplitude
-						if (num_troughs >= 2) {
-							int last_peak = peaks[num_peaks - 1];
-							int last_trough = troughs[num_troughs - 1];
-							int sec_last_trough = troughs[num_troughs - 2];
-							
-							double first_amp = peaks[1] - (troughs[0] + troughs[1]) / 2;
-							double cur_amp = conc[last_peak][cell] - (conc[last_trough][cell] + conc[sec_last_trough][cell]) / 2;
-							if (num_peaks >= 4) {
-								features_files[AMPLITUDE] << cur_amp << " ";
-							}
-							if (cur_amp < (wtfeat.amplitude_post[mr] > 0 ? 0.3 * wtfeat.amplitude_post[mr] : 0.3 * first_amp)) {
-								calc_period = false;
-							}
-						}
-					}
-				}
-				cell_period /= peaks_period;
+                        period_tot += cell_period;
+                        //amplitude += (conc[peak_penult][cell] - (conc[trough_penult][cell] + conc[trough_ult][cell]) / 2);
+                        peaktotrough_end += conc[trough_ult][cell] > 1 ? conc[peak_penult][cell] / conc[trough_ult][cell] : conc[peak_penult][cell];
+                        peaktotrough_mid += conc[trough_mid][cell] > 1 ? conc[peak_mid][cell] / conc[trough_mid][cell] : conc[peak_mid][cell];
 
-				if (num_peaks >= 3) {
-					int peak_penult = peaks[num_peaks - 2];
-					int trough_ult = troughs[num_peaks - 2];	
-					int trough_penult = troughs[num_peaks - 3];	
-					int peak_mid = peaks[num_peaks / 2];
-					int trough_mid = troughs[num_peaks / 2];
+                    } else {
+                        period_tot += (period_tot < INFINITY ? INFINITY : 0);
+                        //amplitude ++;
+                        peaktotrough_end ++;
+                        peaktotrough_mid ++;
+                    }
+                    //num_good_somites += num_troughs - 1;
+                    features_files[PERIOD] << endl;
+                    features_files[AMPLITUDE] << endl;
+                }
+            }
+            //cout<<"period_total: "<<period_tot<<endl;
+            features_files[PERIOD].close();
+            features_files[AMPLITUDE].close();
+            int cells = sd.height * sd.width_current;
+            period_tot /= cells;
+            //amplitude /= cells;
+            peaktotrough_end /= cells;
+            peaktotrough_mid /= cells;
+            //num_good_somites /= cells;
+            if (index == IMH1) {cout<< "period post: " << period_tot<<endl;}
+            feat.period_post = period_tot;
+            //feat.amplitude_post[index] = amplitude;
+            feat.peaktotrough_end = peaktotrough_end;
+            feat.peaktotrough_mid = peaktotrough_mid;
+            //feat.num_good_somites[index] = num_good_somites;
+            //cout<<"peaktotrough_end: "<< peaktotrough_end<< endl;
+            //cout<<"peaktotrough_mid: "<< peaktotrough_mid<<endl;
+            //feat.sync_score_post[index] = post_sync(sd, cl, mr, (start + end) / 2, end);
+        }
 
-					period_tot += cell_period;
-					amplitude += (conc[peak_penult][cell] - (conc[trough_penult][cell] + conc[trough_ult][cell]) / 2);
-					peaktotrough_end += conc[trough_ult][cell] > 1 ? conc[peak_penult][cell] / conc[trough_ult][cell] : conc[peak_penult][cell];
-					peaktotrough_mid += conc[trough_mid][cell] > 1 ? conc[peak_mid][cell] / conc[trough_mid][cell] : conc[peak_mid][cell];
+        mfree(str_set_num);
 
-				} else {
-					period_tot += (period_tot < INFINITY ? INFINITY : 0);
-					amplitude ++;
-					peaktotrough_end ++;
-					peaktotrough_mid ++;
-				}
-				num_good_somites += num_troughs - 1;
-				features_files[PERIOD] << endl;
-				features_files[AMPLITUDE] << endl;
-			}
-		}
-		
-		features_files[PERIOD].close();
-		features_files[AMPLITUDE].close();
-		int cells = sd.height * sd.width_current;
-		period_tot /= cells;
-		amplitude /= cells;
-		peaktotrough_end /= cells;
-		peaktotrough_mid /= cells;
-		num_good_somites /= cells;
+    }
+}
 
-		//feat.period_post[index] = period_tot;
-		feat.amplitude_post[index] = amplitude;
-		feat.peaktotrough_end[index] = peaktotrough_end;
-		feat.peaktotrough_mid[index] = peaktotrough_mid;
-		feat.num_good_somites[index] = num_good_somites;
-		
-		//feat.sync_score_post[index] = post_sync(sd, cl, mr, (start + end) / 2, end);
-	}
-	mfree(str_set_num);
+double amp_10 (sim_data& sd, con_levels& cl, int con, int time){
+    double* tosort= new double[sd.cells_total];
+    bool toprint= false;
+    
+    for (int i=0 ; i< sd.cells_total; i++ ){
+        tosort[i]= cl.cons[con][time][i];
+        //if (isnan(cl.cons[con][time][i])){
+        //    toprint=true;
+        //}
+    }
+    
+    
+    sort(tosort, tosort+sd.cells_total);
+    
+    /*
+    if (toprint){
+        for (int j=0; j< sd.cells_total; j++){
+            cout<< tosort[j]<< " ";
+        }
+        cout<<endl;
+    }
+    */
+    
+    int offset=0;
+    if (con== 3 || con==2){
+        offset=sd.cells_total/2;
+    }
+    
+    int point_cal= 10;
+    if (sd.cells_total <=100){
+        if (con == CMMESPA || con == CMMESPB){point_cal = 3;}
+        else {point_cal =5;}
+    }
+    double max=0;
+    double min=0;
+    for (int i=0; i< point_cal; i++){
+        min+= tosort[i+offset];
+        max+= tosort[sd.cells_total-i-1];
+    }
+    min/=point_cal;
+    max/=point_cal;
+    //if (min<= 0.00001 || min >= 1000000){min= 0;}
+    delete[] tosort;
+    return max-min;
 }
 
 double avg_amp (sim_data& sd, con_levels& cl, int con, int time, int start , int end){              //151221: calculate the average concentration value, and use it as amplitude
@@ -777,6 +786,55 @@ double avg_amp (sim_data& sd, con_levels& cl, int con, int time, int start , int
 	return conslevel / (sd.height*(end-start));
 }
 
+double mesp_sync (sim_data& sd, con_levels& cl, int con, int time) {  //151221: calculate complementary score of mespa and mespb
+    if (sd.height == 1) {
+        return 1; // for 1d arrays there is no synchronization between rows
+    }
+    
+    double her_row[sd.width_total];
+    double mesp_row[sd.width_total];
+    int pos_start = cl.active_start_record[time];
+    int pos_first = 0;
+    int pos_cur = 0;
+    double pearson_sum = 0;
+    for (int r = 0; r < sd.height; r++){
+        for (int y = 0; y < sd.width_total; y++) {
+            
+            if (con == 3 || con ==2){
+                if (pos_start - y < 0){
+                    pos_first = pos_start -2*y + sd.width_total;
+                } else {
+                    pos_first = pos_start -2*y;
+                }
+            }
+            
+            int cell= r*sd.width_total + y + pos_first;
+            her_row[y] = cl.cons[1][time][cell];
+            //her_row[y] = cl.cons[1][time][cell];
+        }
+    
+       
+        for (int x = 0; x < sd.height; x++) {
+            for (int y = 0; y < sd.width_total; y++) {
+                
+                if (con == 3 || con ==2){
+                    if (pos_start - y < 0){
+                        pos_cur = pos_start -2*y + sd.width_total;
+                    } else {
+                        pos_cur = pos_start -2*y;
+                    }
+                }
+                
+                int cell = x * sd.width_total + y + pos_cur;
+                mesp_row[y] = cl.cons[con][time][cell];
+            }
+            
+            
+            pearson_sum += pearson_correlation(her_row, mesp_row, (int)(0.6*sd.width_total), sd.width_total );   //mespa and mespb only express in anterior
+        }
+    }
+    return (pearson_sum / (sd.height ))/ (sd.height );
+}
 double ant_sync (sim_data& sd, con_levels& cl, int con, int time) {  //151221: calculate syncronization score
 	if (sd.height == 1) {
 		return 1; // for 1d arrays there is no synchronization between rows 
@@ -787,22 +845,24 @@ double ant_sync (sim_data& sd, con_levels& cl, int con, int time) {  //151221: c
 	int pos_start = cl.active_start_record[time];
 	int pos_first = 0;
 	int pos_cur = 0;
-
+	double pearson_sum = 0;
 	for (int y = 0; y < sd.width_total; y++) {
-		if (con == 3 || con ==4){
+		if (con == 3 || con ==2){
 			if (pos_start - y < 0){
 				pos_first = pos_start -2*y + sd.width_total;
 			} else {
 				pos_first = pos_start -2*y;
 			}
 		}
-		first_row[y] = cl.cons[con][time][y + pos_first];
+        int cell= y + pos_first;
+        first_row[y] = cl.cons[con][time][cell];
+		//first_row[y] = cl.cons[con][time][y + pos_first];
 	}
 
-	double pearson_sum = 0;
+
 	for (int x = 1; x < sd.height; x++) {
 		for (int y = 0; y < sd.width_total; y++) {
-			if (con == 3 || con ==4){
+			if (con == 3 || con ==2){
 				if (pos_start - y < 0){
 					pos_cur = pos_start -2*y + sd.width_total;
 				} else {
@@ -812,7 +872,7 @@ double ant_sync (sim_data& sd, con_levels& cl, int con, int time) {  //151221: c
 			int cell = x * sd.width_total + y + pos_cur;
 			cur_row[y] = cl.cons[con][time][cell];
 		}
-		if (con == 3 || con ==4){
+		if (con == 3 || con ==2){
 			
 			pearson_sum += pearson_correlation(first_row, cur_row, (int)(0.6*sd.width_total), sd.width_total );   //mespa and mespb only express in anterior
 		} else {
@@ -865,8 +925,9 @@ void plot_ant_sync (sim_data& sd, con_levels& cl, int time_start, ofstream* file
 	*file_pointer << endl;
 }
 
-
-double post_sync (sim_data& sd, con_levels& cl, int con, int start, int end) {  //151221: not used
+//only used in post to measure sync_score
+//compare each cell in the posterior part to the cell in middle
+double post_sync (sim_data& sd, con_levels& cl, int con, int start, int end) {
 	double comp_cell[end - start + 1];
 	double cur_cell[end - start + 1];
 	
@@ -889,7 +950,6 @@ double post_sync (sim_data& sd, con_levels& cl, int con, int start, int end) {  
 			}
 		}
 	}
-	
 	return pearson_sum / ((sd.height * sd.width_initial) - 1);
 }
 
@@ -903,8 +963,6 @@ double pearson_correlation (double* x, double* y, int start, int end) {
 	for (int j = start; j < end; j++) {
 		x_avg += x[j];
 		y_avg += y[j];
-		
-		
 	}
 	x_avg /= (end - start);
 	y_avg /= (end - start);
@@ -914,264 +972,12 @@ double pearson_correlation (double* x, double* y, int start, int end) {
 		sigma_x2 += SQUARE(x[j] - x_avg);
 		sigma_y2 += SQUARE(y[j] - y_avg);
 	}
-	
 	sigma_x2 = sqrt(sigma_x2);
 	sigma_y2 = sqrt(sigma_y2);
 	
 	if (sigma_x2 == 0 || sigma_y2 == 0) {
-		
-		
 		return 1;
-	} else {	
-		
+	} else {
 		return sigma_xy / ((sigma_x2 * sigma_y2));
 	}
-}
-
-int wave_testing (sim_data& sd, con_levels& cl, mutant_data& md, int time, int con, int active_start) { //JY WT.4.5.6.7 151221: counting number of waves
-	// average the rows to create one array
-	double conc[sd.width_total];
-	memset(conc, 0, sizeof(double) * sd.width_total);
-
-	for (int x = 0; x < sd.width_total; x++) {
-		double avg = 0;
-		for (int y = 0; y < sd.height; y++) {
-			int cell = y * sd.width_total + WRAP(active_start - x, sd.width_total);
-			avg += cl.cons[con][time][cell];
-		}
-		conc[x] = avg / sd.height;
-	}
-
-	// find the highest peak in the entire psm to set the threshold for a signal
-	double thresh = 0;
-	for (int x = 0; x < sd.width_total; x++) {
-		if (conc[x] > thresh) {
-			thresh = conc[x];
-		}
-	}
-	thresh /= 2;
-
-	int num_waves = 0;
-	pair <int, int> waves[3];
-	for (int wave = 0; wave < 3; wave++) {
-		waves[wave].first = 0;
-		waves[wave].second = sd.width_total;
-	}
-
-	// count the number of waves in the anterior
-	for (int x = 0; x < sd.width_total; x++) {
-		// check for wave start
-		if (conc[x] >= thresh && (x == 0 || conc[x - 1] < thresh)) {
-			if (num_waves == 3) {
-				num_waves++;
-				break;
-			}
-			waves[num_waves].first = (x == 0 ? 0 : x - 1);
-		}
-
-		// check for wave end
-		if (conc[x] < thresh && x > 0 && (conc[x - 1] >= thresh)) {
-			if (num_waves == 3) {
-				num_waves++;
-				break;
-			}
-			waves[num_waves].second = x;			
-			num_waves++;
-		}
-	}
-	
-	int wlength_post = 5, wlength_ant = 2;
-	if (num_waves <= 3) {
-		for (int wave = 0; wave < num_waves; wave++) {
-			int start = waves[wave].first;
-			int end = waves[wave].second;
-			int mid = (end - start) / 2;
-			if (mid > sd.width_initial && mid < 0.8 * sd.width_total) {
-				wlength_post = end - start + 1;
-			}
-			if (mid >= 0.8 * sd.width_total) {
-				wlength_ant = end - start + 1;
-			}
-		}
-	}
-	int result = md.wave_test(waves, num_waves, md, wlength_post, wlength_ant); //JY WT.5.6.7
-	return result;
-}
-
-
-int wave_testing_her1 (sim_data& sd, con_levels& cl, mutant_data& md, int time, int active_start) { //151221: counting number of waves of her1 expression for her1 mutant, notused
-	// average the rows to create one array
-	double conc[sd.width_total];
-	memset(conc, 0, sizeof(double) * sd.width_total);
-	int cur_score = 0;
-	
-	for (int her1or7 = 0; her1or7 <1 ; her1or7++){
-		for (int x = 0; x < sd.width_total; x++) {
-			double avg = 0;
-			for (int y = 0; y < sd.height; y++) {
-				int cell = y * sd.width_total + WRAP(active_start - x, sd.width_total);
-				if (her1or7 ==0){
-					avg += cl.cons[CMH1][time][cell];
-				} else {
-					avg += cl.cons[CMH7][time][cell];
-				}	
-			}
-			conc[x] = avg / sd.height;
-		}
-	
-	// find the highest peak in the entire psm to set the threshold for a signal
-		double thresh = 0;
-		for (int x = 0; x < sd.width_total; x++) {
-			if (conc[x] > thresh) {
-				thresh = conc[x];
-			}
-		}
-		thresh /= 2;
-
-		int num_waves = 0;
-		pair <int, int> waves[3];
-		for (int wave = 0; wave < 3; wave++) {
-			waves[wave].first = 0;
-			waves[wave].second = sd.width_total;
-		}
-
-		// count the number of waves in the anterior
-		for (int x = 0; x < sd.width_total; x++) {
-		// check for wave start
-			if (conc[x] >= thresh && (x == 0 || conc[x - 1] < thresh)) {
-				if (num_waves == 3) {
-					num_waves++;
-					break;
-				}
-				waves[num_waves].first = (x == 0 ? 0 : x - 1);
-			}
-
-		// check for wave end
-			if (conc[x] < thresh && x > 0 && (conc[x - 1] >= thresh)) {
-				if (num_waves == 3) {
-					num_waves++;
-					break;
-				}
-				waves[num_waves].second = x;			
-				num_waves++;
-			}
-		}
-		cur_score = test_her1_wave(waves, num_waves, md, 0, 0);
-	}
-	return cur_score;
-}
-
-void wave_testing_mesp (sim_data& sd, con_levels& cl, mutant_data& md, int time, int active_start) { //151221: counting the number of waves of mesp gene expression
-	// average the rows to create one array
-	double conc[sd.width_total];
-	memset(conc, 0, sizeof(double) * sd.width_total);
-	
-	
-	for (int mespaorb = 0; mespaorb <2 ; mespaorb++){
-		for (int x = 0; x < sd.width_total; x++) {
-			double avg = 0;
-			for (int y = 0; y < sd.height; y++) {
-				int cell = y * sd.width_total + WRAP(active_start - x, sd.width_total);
-				if (mespaorb ==0){
-					avg += cl.cons[CMMESPA][time][cell];
-				} else {
-					avg += cl.cons[CMMESPB][time][cell];
-				}	
-			}
-			conc[x] = avg / sd.height;
-		}
-	
-	// find the highest peak in the entire psm to set the threshold for a signal
-		double thresh = 0;
-		for (int x = 0; x < sd.width_total; x++) {
-			if (conc[x] > thresh) {
-				thresh = conc[x];
-			}
-		}
-		thresh /= 2;
-
-		int num_waves = 0;
-		pair <int, int> waves[3];
-		for (int wave = 0; wave < 3; wave++) {
-			waves[wave].first = 0;
-			waves[wave].second = sd.width_total;
-		}
-
-		// count the number of waves in the anterior
-		for (int x = 0; x < sd.width_total; x++) {
-		// check for wave start
-			if (conc[x] >= thresh && (x == 0 || conc[x - 1] < thresh)) {
-				if (num_waves == 3) {
-					num_waves++;
-					break;
-				}
-				waves[num_waves].first = (x == 0 ? 0 : x - 1);
-			}
-
-		// check for wave end
-			if (conc[x] < thresh && x > 0 && (conc[x - 1] >= thresh)) {
-				if (num_waves == 3) {
-					num_waves++;
-					break;
-				}
-				waves[num_waves].second = x;			
-				num_waves++;
-			}
-		}
-		int wlength_post=5;
-		int wlength_ant=3;
-		md.conds_passed[SEC_ANT][8] = 1;
-		if (mespaorb == 0) {
-			md.conds_passed[SEC_ANT][6] = md.conds_passed[SEC_ANT][6]&&(1<=num_waves && num_waves<=2);
-			for (int wave = 0; wave < num_waves; wave++) {
-				int start = waves[wave].first;
-				int end = waves[wave].second;
-				int mid = (end - start) / 2;
-				if (mid > sd.width_initial && mid < 0.8 * sd.width_total) {
-					wlength_post = end - start + 1;
-					if (wlength_post<3 || wlength_post>5){
-						md.conds_passed[SEC_ANT][8] = md.conds_passed[SEC_ANT][8]&&0;
-						break;
-					} else {
-						md.conds_passed[SEC_ANT][8] = md.conds_passed[SEC_ANT][8]&&1;
-					}
-				}
-				if (mid >= 0.8 * sd.width_total) {
-					wlength_ant = end - start + 1;
-					if (wlength_ant<2 || wlength_post>3){
-						md.conds_passed[SEC_ANT][8] = md.conds_passed[SEC_ANT][8]&&0;
-						break;
-					} else {
-						md.conds_passed[SEC_ANT][8] = md.conds_passed[SEC_ANT][8]&&1;
-					}
-				}
-			}
-		} else {
-			md.conds_passed[SEC_ANT][7] = md.conds_passed[SEC_ANT][7]&&(2<=num_waves && num_waves<=3);
-			for (int wave = 0; wave < num_waves; wave++) {
-				int start = waves[wave].first;
-				int end = waves[wave].second;
-				int mid = (end - start) / 2;
-				if (mid > sd.width_initial && mid < 0.8 * sd.width_total) {
-					wlength_post = end - start + 1;
-					if (wlength_post<3 || wlength_post>5){
-						md.conds_passed[SEC_ANT][8] = md.conds_passed[SEC_ANT][8]&&0;
-						break;
-					} else {
-						md.conds_passed[SEC_ANT][8] = md.conds_passed[SEC_ANT][8]&&1;
-					}
-				}
-				if (mid >= 0.8 * sd.width_total) {
-					wlength_ant = end - start + 1;
-					if (wlength_ant<2 || wlength_post>3){
-						md.conds_passed[SEC_ANT][8] = md.conds_passed[SEC_ANT][8]&&0;
-						break;
-					} else {
-						md.conds_passed[SEC_ANT][8] = md.conds_passed[SEC_ANT][8]&&1;
-					}
-				}
-			}
-		}
-	}
-	return;
 }

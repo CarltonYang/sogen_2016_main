@@ -1,0 +1,15 @@
+#PBS -N testjob  
+#PBS -l nodes=4:ppn=8    
+#PBS -l mem=2GB
+#PBS -q biomath
+#PBS -M cyang@colgate.edu
+#PBS -m bea        
+#PBS -j oe         
+#PBS -l walltime=00:12:00 
+#PBS -r y
+
+cd $PBS_O_WORKDIR            
+hostname
+date
+mpiexec -np 32 ./hello_mpi
+date

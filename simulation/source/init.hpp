@@ -54,7 +54,7 @@ void delete_dirs(input_params&, char**);
 ofstream* create_features_file(input_params&, mutant_data[]);
 ofstream* create_conditions_file(input_params&, mutant_data[]);
 ofstream* create_scores_file (input_params&, mutant_data[]);
-mutant_data* create_mutant_data(sim_data&, input_params&);
+mutant_data* create_mutant_data(sim_data&, input_params&, rates&);
 void delete_mutant_data(mutant_data[]);
 void delete_sets(double**, input_params&);
 void copy_cl_to_mutant(sim_data&, con_levels&, mutant_data&);

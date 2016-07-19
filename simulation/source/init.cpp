@@ -180,9 +180,11 @@ void accept_input_params (int num_args, char** args, input_params& ip) {
 			} else if (option_set(option, "-Q", "--mespa-induction")) {
 				ensure_nonempty(option, value);
 				ip.mespa_induction = atoi(value);
+                //cout<<"MEPSA INDUCTION: "<<ip.mespa_induction<<endl;
 			} else if (option_set(option, "-K", "--mespb-induction")) {
 				ensure_nonempty(option, value);
 				ip.mespb_induction = atoi(value);
+                //cout<<"MEPSB INDUCTION: "<<ip.mespb_induction<<endl;
 			} else if (option_set(option, "-W", "--print-conditions")) {
 				ensure_nonempty(option, value);
 				store_filename(&(ip.conditions_file), value);
@@ -651,7 +653,9 @@ void fill_gradients (rates& rs, char* gradients) {
 			if (sscanf(gradients + i, "%d", &con) != 1) {
 				usage(usage_message);
 			}
+            
 			if (con < 0 || con > NUM_RATES) {
+                
 				usage("The given gradients file includes rate indices outside of the valid range. Please adjust the gradients file or add the appropriate rates by editing the macros file and recompiling.");
 			}
 			rs.using_gradients = true; // Mark that at least one concentration has a gradient
@@ -901,7 +905,7 @@ ofstream* create_scores_file (input_params& ip, mutant_data mds[]) {
 
 	20151221: commented out unused mutant initialization.
 */
-mutant_data* create_mutant_data (sim_data& sd, input_params& ip) {
+mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
 	mutant_data* mds = new mutant_data[sd.num_active_mutants];
 	bool single_mutant = false;
 	if (sd.num_active_mutants == 2) {
@@ -909,7 +913,11 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip) {
 			single_mutant = true;
 		}
 	}
-	
+    if (ip.time_total==ip.time_til_growth){
+        for (int i=0;i<sd.num_active_mutants;i++){
+            mds[i].only_post=true;
+        }
+    }
 	// Index each mutant and initialize its concentration levels based on the maximum delay size
 	for (int i = 0; i < sd.num_active_mutants; i++) {
 		
@@ -927,11 +935,9 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip) {
     mds[MUTANT_WILDTYPE].overexpression_factor = 0;
 	mds[MUTANT_WILDTYPE].tests[SEC_POST] = test_wildtype_post;
 	mds[MUTANT_WILDTYPE].tests[SEC_ANT] = test_wildtype_ant;
-	mds[MUTANT_WILDTYPE].wave_test = test_wildtype_wave;
-	mds[MUTANT_WILDTYPE].num_conditions[SEC_POST] = 3;
+    mds[MUTANT_WILDTYPE].num_conditions[SEC_POST] = 2;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_POST][0] = CW_A;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_POST][1] = CW_B;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_POST][2] = CW_A;
+	mds[MUTANT_WILDTYPE].cond_scores[SEC_POST][1] = CW_A;
 	mds[MUTANT_WILDTYPE].num_conditions[SEC_ANT] = 9;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][0] = CW_A;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][1] = CW_A;
@@ -939,61 +945,17 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip) {
     mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][3] = CW_B;
     mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][4] = CW_A;
     mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][5] = CW_A;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][6] = CW_B;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][7] = CW_B;
+	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][6] = CW_A;
+	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][7] = CW_A;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][8] = CW_B;
-	mds[MUTANT_WILDTYPE].num_conditions[SEC_WAVE] = 4;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_WAVE][0] = CW_A;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_WAVE][1] = CW_B;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_WAVE][2] = CW_B;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_WAVE][3] = CW_B;
 	mds[MUTANT_WILDTYPE].calc_max_scores();
+    
+    mds[MUTANT_WILDTYPE].print_con = CMMESPB;
 	//mds[MUTANT_WILDTYPE].secs_passed[SEC_WAVE] = true;
 	
-	// Her7
-	/*if (MUTANT_HER7 >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_HER7].print_name = copy_str("her7 mutant");
-	mds[MUTANT_HER7].dir_name = copy_str("her7");
-	mds[MUTANT_HER7].num_knockouts = 1;
-	mds[MUTANT_HER7].knockouts[0] = RPSH7;
-	mds[MUTANT_HER7].induction = 0;
-    mds[MUTANT_HER7].recovery = 999999999;
-    mds[MUTANT_HER7].overexpression_rate = -1;
-    mds[MUTANT_HER7].overexpression_factor = 0;
-	mds[MUTANT_HER7].tests[SEC_POST] = test_her7_mutant_post;
-	mds[MUTANT_HER7].tests[SEC_ANT] = test_her7_mutant_ant;
-	mds[MUTANT_HER7].num_conditions[SEC_POST] = 2;
-	mds[MUTANT_HER7].cond_scores[SEC_POST][0] = CW_A;
-	mds[MUTANT_HER7].cond_scores[SEC_POST][1] = CW_A;
-	mds[MUTANT_HER7].num_conditions[SEC_ANT] = 2;
-	mds[MUTANT_HER7].cond_scores[SEC_ANT][0] = CW_B;
-	mds[MUTANT_HER7].cond_scores[SEC_ANT][1] = CW_A;
-	mds[MUTANT_HER7].num_conditions[SEC_WAVE] = 0;
-	mds[MUTANT_HER7].calc_max_scores();*/
-	
-	// Her13
-	/*if (MUTANT_HER13 >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_HER13].print_name = copy_str("her13 mutant");
-	mds[MUTANT_HER13].dir_name = copy_str("her13");
-	mds[MUTANT_HER13].num_knockouts = 1;
-	mds[MUTANT_HER13].knockouts[0] = RPSH13;
-	mds[MUTANT_HER13].induction = 0;
-    mds[MUTANT_HER13].recovery = 999999999;
-    mds[MUTANT_HER13].overexpression_rate = -1;
-    mds[MUTANT_HER13].overexpression_factor = 0;
-	mds[MUTANT_HER13].tests[SEC_POST] = test_her13_mutant_post;
-	mds[MUTANT_HER13].tests[SEC_ANT] = test_her13_mutant_ant;
-	mds[MUTANT_HER13].num_conditions[SEC_POST] = 3;
-	mds[MUTANT_HER13].cond_scores[SEC_POST][0] = CW_A;
-	mds[MUTANT_HER13].cond_scores[SEC_POST][1] = CW_A;
-	mds[MUTANT_HER13].cond_scores[SEC_POST][2] = CW_A;
-	mds[MUTANT_HER13].num_conditions[SEC_ANT] = 2;
-	mds[MUTANT_HER13].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_HER13].cond_scores[SEC_ANT][1] = CW_B;
-	mds[MUTANT_HER13].num_conditions[SEC_WAVE] = 0;
-	mds[MUTANT_HER13].calc_max_scores();*/
-	
-	// Delta
+    
+    
+  	// Delta
 	if (MUTANT_DELTA >= sd.num_active_mutants && single_mutant==false) {return mds;}
 	mds[MUTANT_DELTA].print_name = copy_str("delta mutant");
 	mds[MUTANT_DELTA].dir_name = copy_str("delta");
@@ -1005,220 +967,56 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip) {
     mds[MUTANT_DELTA].overexpression_factor = 0;
 	mds[MUTANT_DELTA].tests[SEC_POST] = test_delta_mutant_post;
 	mds[MUTANT_DELTA].tests[SEC_ANT] = test_delta_mutant_ant;
-	mds[MUTANT_DELTA].num_conditions[SEC_POST] = 3;
-	mds[MUTANT_DELTA].cond_scores[SEC_POST][0] = CW_B;
-	mds[MUTANT_DELTA].cond_scores[SEC_POST][1] = CW_A;
-	mds[MUTANT_DELTA].cond_scores[SEC_POST][2] = CW_A;
+	mds[MUTANT_DELTA].num_conditions[SEC_POST] = 1;
+	mds[MUTANT_DELTA].cond_scores[SEC_POST][0] = CW_A;
 	mds[MUTANT_DELTA].num_conditions[SEC_ANT] = 4;
 	mds[MUTANT_DELTA].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_DELTA].cond_scores[SEC_ANT][1] = CW_B;
+	mds[MUTANT_DELTA].cond_scores[SEC_ANT][1] = CW_A;
     mds[MUTANT_DELTA].cond_scores[SEC_ANT][2] = CW_A;
-    mds[MUTANT_DELTA].cond_scores[SEC_ANT][3] = CW_B;
-	mds[MUTANT_DELTA].num_conditions[SEC_WAVE] = 0;
-	mds[MUTANT_DELTA].calc_max_scores();
+    mds[MUTANT_DELTA].cond_scores[SEC_ANT][3] = CW_A;
+    mds[MUTANT_DELTA].calc_max_scores();
+    mds[MUTANT_DELTA].print_con = CMDELTA;
 	
-	// Her7-Her13
-	/*if (MUTANT_HER7HER13 >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_HER7HER13].print_name = copy_str("her7-her13 mutant");
-	mds[MUTANT_HER7HER13].dir_name = copy_str("her7her13");
-	mds[MUTANT_HER7HER13].num_knockouts = 2;
-	mds[MUTANT_HER7HER13].knockouts[0] = RPSH7;
-	mds[MUTANT_HER7HER13].knockouts[1] = RPSH13;
-	mds[MUTANT_HER7HER13].induction = 0;
-    mds[MUTANT_HER7HER13].recovery = 999999999;
-    mds[MUTANT_HER7HER13].overexpression_rate = -1;
-    mds[MUTANT_HER7HER13].overexpression_factor = 0;
-	mds[MUTANT_HER7HER13].tests[SEC_POST] = test_her7her13_mutant_post;
-	mds[MUTANT_HER7HER13].tests[SEC_ANT] = test_her7her13_mutant_ant;
-	mds[MUTANT_HER7HER13].num_conditions[SEC_POST] = 3;
-	mds[MUTANT_HER7HER13].cond_scores[SEC_POST][0] = CW_B;
-	mds[MUTANT_HER7HER13].cond_scores[SEC_POST][1] = CW_B;
-	mds[MUTANT_HER7HER13].cond_scores[SEC_POST][2] = CW_B;
-	mds[MUTANT_HER7HER13].num_conditions[SEC_ANT] = 2;
-	mds[MUTANT_HER7HER13].cond_scores[SEC_ANT][0] = CW_B;
-	mds[MUTANT_HER7HER13].cond_scores[SEC_ANT][1] = CW_B;
-	mds[MUTANT_HER7HER13].num_conditions[SEC_WAVE] = 0;
-	mds[MUTANT_HER7HER13].calc_max_scores();*/
-	
-	// Her1
-	/*if (MUTANT_HER1 >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_HER1].print_name = copy_str("her1 mutant");
-	mds[MUTANT_HER1].dir_name = copy_str("her1");
-	mds[MUTANT_HER1].num_knockouts = 1;
-	mds[MUTANT_HER1].knockouts[0] = RPSH1;
-	mds[MUTANT_HER1].induction = 0;
-    mds[MUTANT_HER1].recovery = 999999999;
-    mds[MUTANT_HER1].overexpression_rate = -1;
-    mds[MUTANT_HER1].overexpression_factor = 0;
-	mds[MUTANT_HER1].tests[SEC_POST] = test_her1_mutant_post;
-	mds[MUTANT_HER1].tests[SEC_ANT] = test_her1_mutant_ant;
-	mds[MUTANT_HER1].wave_test = test_her1_wave;
-	mds[MUTANT_HER1].num_conditions[SEC_POST] = 3;
-	mds[MUTANT_HER1].cond_scores[SEC_POST][0] = CW_A;
-	mds[MUTANT_HER1].cond_scores[SEC_POST][1] = CW_A;
-	mds[MUTANT_HER1].cond_scores[SEC_POST][2] = CW_A;
-	mds[MUTANT_HER1].num_conditions[SEC_ANT] = 1;
-	mds[MUTANT_HER1].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_HER1].num_conditions[SEC_WAVE] = 1;
-	mds[MUTANT_HER1].cond_scores[SEC_WAVE][0] = CW_B;
-	mds[MUTANT_HER1].calc_max_scores();
-	//mds[MUTANT_HER1].secs_passed[SEC_WAVE] = true;*/
-	
-	// Her7-Delta
-	/*if (MUTANT_HER7DELTA >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_HER7DELTA].print_name = copy_str("her7-delta mutant");
-	mds[MUTANT_HER7DELTA].dir_name = copy_str("her7delta");
-	mds[MUTANT_HER7DELTA].num_knockouts = 2;
-	mds[MUTANT_HER7DELTA].knockouts[0] = RPSH7;
-	mds[MUTANT_HER7DELTA].knockouts[1] = RPSDELTA;
-	mds[MUTANT_HER7DELTA].induction = 0;
-    mds[MUTANT_HER7DELTA].recovery = 999999999;
-    mds[MUTANT_HER7DELTA].overexpression_rate = -1;
-    mds[MUTANT_HER7DELTA].overexpression_factor = 0;
-	mds[MUTANT_HER7DELTA].tests[SEC_POST] = test_her7delta_mutant_post;
-	mds[MUTANT_HER7DELTA].tests[SEC_ANT] = test_her7delta_mutant_ant;
-	mds[MUTANT_HER7DELTA].num_conditions[SEC_POST] = 1;
-	mds[MUTANT_HER7DELTA].cond_scores[SEC_POST][0] = CW_B;
-	mds[MUTANT_HER7DELTA].num_conditions[SEC_ANT] = 2;
-	mds[MUTANT_HER7DELTA].cond_scores[SEC_ANT][0] = CW_B;
-	mds[MUTANT_HER7DELTA].cond_scores[SEC_ANT][1] = CW_B;
-	mds[MUTANT_HER7DELTA].num_conditions[SEC_WAVE] = 0;
-	mds[MUTANT_HER7DELTA].calc_max_scores();*/
-	
-	// Her1-Delta
-	/*if (MUTANT_HER1DELTA >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_HER1DELTA].print_name = copy_str("her1-delta mutant");
-	mds[MUTANT_HER1DELTA].dir_name = copy_str("her7delta");
-	mds[MUTANT_HER1DELTA].num_knockouts = 2;
-	mds[MUTANT_HER1DELTA].knockouts[0] = RPSH1;
-	mds[MUTANT_HER1DELTA].knockouts[1] = RPSDELTA;
-	mds[MUTANT_HER1DELTA].induction = 0;
-    mds[MUTANT_HER1DELTA].recovery = 999999999;
-    mds[MUTANT_HER1DELTA].overexpression_rate = -1;
-    mds[MUTANT_HER1DELTA].overexpression_rate = 0;
-	mds[MUTANT_HER1DELTA].tests[SEC_POST] = test_her1delta_mutant_post;
-	mds[MUTANT_HER1DELTA].tests[SEC_ANT] = test_her1delta_mutant_ant;
-	mds[MUTANT_HER1DELTA].num_conditions[SEC_POST] = 1;
-	mds[MUTANT_HER1DELTA].cond_scores[SEC_POST][0] = CW_B;
-	mds[MUTANT_HER1DELTA].num_conditions[SEC_ANT] = 2;
-	mds[MUTANT_HER1DELTA].cond_scores[SEC_ANT][0] = CW_B;
-	mds[MUTANT_HER1DELTA].cond_scores[SEC_ANT][1] = CW_B;
-	mds[MUTANT_HER1DELTA].num_conditions[SEC_WAVE] = 0;
-	mds[MUTANT_HER1DELTA].calc_max_scores();*/
-	
-	// Her7-overexpressed
-	if (MUTANT_HER7OVER >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_HER7OVER].print_name = copy_str("her7-overexpressed mutant");
-	mds[MUTANT_HER7OVER].dir_name = copy_str("her7over");
-	mds[MUTANT_HER7OVER].num_knockouts = 0;
-	//mds[MUTANT_HER7OVER].induction = ip.her7_induction / ip.small_gran;
-	mds[MUTANT_HER7OVER].induction = ip.her7_induction / ip.step_size;
-    mds[MUTANT_HER7OVER].recovery = ip.her7_induction / ip.step_size + (60/sd.step_size);
-    mds[MUTANT_HER7OVER].overexpression_rate = RMSH7;
-    mds[MUTANT_HER7OVER].overexpression_factor = 2;
-	mds[MUTANT_HER7OVER].tests[SEC_POST] = test_her7over_mutant_post;
-	mds[MUTANT_HER7OVER].tests[SEC_ANT] = test_her7over_mutant_ant;
-	mds[MUTANT_HER7OVER].num_conditions[SEC_POST] = 0;
-	mds[MUTANT_HER7OVER].num_conditions[SEC_ANT] = 8;
-	mds[MUTANT_HER7OVER].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_HER7OVER].cond_scores[SEC_ANT][1] = CW_B;
-	mds[MUTANT_HER7OVER].cond_scores[SEC_ANT][2] = CW_A;
-	mds[MUTANT_HER7OVER].cond_scores[SEC_ANT][3] = CW_A;
-	mds[MUTANT_HER7OVER].cond_scores[SEC_ANT][4] = CW_B;
-	mds[MUTANT_HER7OVER].cond_scores[SEC_ANT][5] = CW_A;
-	mds[MUTANT_HER7OVER].cond_scores[SEC_ANT][6] = CW_B;
-	mds[MUTANT_HER7OVER].cond_scores[SEC_ANT][7] = CW_B;
-	mds[MUTANT_HER7OVER].num_conditions[SEC_WAVE] = 0;
-	mds[MUTANT_HER7OVER].calc_max_scores();
-	
+     
 	// Her1-overexpressed
 	if (MUTANT_HER1OVER >= sd.num_active_mutants && single_mutant==false) {return mds;}
 	mds[MUTANT_HER1OVER].print_name = copy_str("her1-overexpressed mutant");
 	mds[MUTANT_HER1OVER].dir_name = copy_str("her1over");
 	mds[MUTANT_HER1OVER].num_knockouts = 0;
-    //mds[MUTANT_HER1OVER].induction = ip.her1_induction / ip.small_gran;
 	mds[MUTANT_HER1OVER].induction = ip.her1_induction / ip.step_size;
-    mds[MUTANT_HER1OVER].recovery = 999999999;
+    mds[MUTANT_HER1OVER].recovery = ip.her1_induction / ip.step_size + (30/sd.step_size);
     mds[MUTANT_HER1OVER].overexpression_rate = RMSH1;
-    mds[MUTANT_HER1OVER].overexpression_factor = 2;
+    mds[MUTANT_HER1OVER].overexpression_factor = 5 ;
+   
 	mds[MUTANT_HER1OVER].tests[SEC_POST] = test_her1over_mutant_post;
 	mds[MUTANT_HER1OVER].tests[SEC_ANT] = test_her1over_mutant_ant;
-	mds[MUTANT_HER1OVER].num_conditions[SEC_POST] = 1;
-	mds[MUTANT_HER1OVER].cond_scores[SEC_POST][0] = CW_B;
-	mds[MUTANT_HER1OVER].num_conditions[SEC_ANT] = 5;
-	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][0] = CW_B;
+	mds[MUTANT_HER1OVER].num_conditions[SEC_POST] = 0;
+    mds[MUTANT_HER1OVER].num_conditions[SEC_ANT] = 4;
+	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][0] = CW_A;
 	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][1] = CW_A;
 	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][2] = CW_A;
-	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][3] = CW_B;
-	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][4] = CW_A;
-	mds[MUTANT_HER1OVER].num_conditions[SEC_WAVE] = 0;
+	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][3] = CW_A;
 	mds[MUTANT_HER1OVER].calc_max_scores();
-	//mds[MUTANT_HER1OVER].print_con = CMH7;
+	mds[MUTANT_HER1OVER].print_con = CMH1;
 	
-	// Delta-overexpressed
-	/*if (MUTANT_DELTAOVER >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_DELTAOVER].print_name = copy_str("delta-overexpressed mutant");
-	mds[MUTANT_DELTAOVER].dir_name = copy_str("deltaover");
-	mds[MUTANT_DELTAOVER].num_knockouts = 0;
-	mds[MUTANT_DELTAOVER].induction = 0;
-    mds[MUTANT_DELTAOVER].recovery = 999999999;
-    mds[MUTANT_DELTAOVER].overexpression_rate = RMSDELTA;
-    mds[MUTANT_DELTAOVER].overexpression_factor = 2;
-	mds[MUTANT_DELTAOVER].tests[SEC_POST] = test_deltaover_mutant_post;
-	mds[MUTANT_DELTAOVER].tests[SEC_ANT] = test_deltaover_mutant_ant;
-	mds[MUTANT_DELTAOVER].num_conditions[SEC_POST] = 1;
-	mds[MUTANT_DELTAOVER].cond_scores[SEC_POST][0] = CW_A;
-	mds[MUTANT_DELTAOVER].num_conditions[SEC_ANT] = 2;
-	mds[MUTANT_DELTAOVER].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_DELTAOVER].cond_scores[SEC_ANT][1] = CW_A;
-	mds[MUTANT_DELTAOVER].num_conditions[SEC_WAVE] = 0;
-	mds[MUTANT_DELTAOVER].calc_max_scores();*/
-	
-	// Her1-Her7
-	/*if (MUTANT_HER1HER7 >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_HER1HER7].print_name = copy_str("her1-her7 mutant");
-	mds[MUTANT_HER1HER7].dir_name = copy_str("her1her7");
-	mds[MUTANT_HER1HER7].num_knockouts = 2;
-	mds[MUTANT_HER1HER7].knockouts[0] = RPSH1;
-	mds[MUTANT_HER1HER7].knockouts[1] = RPSH7;
-	mds[MUTANT_HER1HER7].induction = 0;
-    mds[MUTANT_HER1HER7].recovery = 999999999;
-    mds[MUTANT_HER1HER7].overexpression_rate = -1;
-    mds[MUTANT_HER1HER7].overexpression_factor = 0;
-	mds[MUTANT_HER1HER7].tests[SEC_POST] = test_her1her7_mutant_post;
-	mds[MUTANT_HER1HER7].tests[SEC_ANT] = test_her1her7_mutant_ant;
-	mds[MUTANT_HER1HER7].num_conditions[SEC_POST] = 0;
-	mds[MUTANT_HER7HER13].num_conditions[SEC_ANT] = 4;
-	mds[MUTANT_HER7HER13].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_HER7HER13].cond_scores[SEC_ANT][1] = CW_A;
-	mds[MUTANT_HER7HER13].cond_scores[SEC_ANT][2] = CW_A;
-	mds[MUTANT_HER7HER13].cond_scores[SEC_ANT][3] = CW_A;
-	mds[MUTANT_HER7HER13].num_conditions[SEC_WAVE] = 0;
-	mds[MUTANT_HER7HER13].calc_max_scores();*/
-	
-	// DAPT
+    // DAPT
 	if (MUTANT_DAPT >= sd.num_active_mutants && single_mutant==false) {return mds;}
 	mds[MUTANT_DAPT].print_name = copy_str("DAPT mutant");
 	mds[MUTANT_DAPT].dir_name = copy_str("DAPT");
 	mds[MUTANT_DAPT].num_knockouts = 1; 
 	mds[MUTANT_DAPT].knockouts[0] = RPSDELTA;
-	//mds[MUTANT_DAPT].induction = ip.DAPT_induction / ip.small_gran;
 	mds[MUTANT_DAPT].induction = ip.DAPT_induction / ip.step_size;
     mds[MUTANT_DAPT].recovery = 999999999;
     mds[MUTANT_DAPT].overexpression_rate = -1;
     mds[MUTANT_DAPT].overexpression_factor = 0;
 	mds[MUTANT_DAPT].tests[SEC_POST] = test_DAPT_mutant_post;
 	mds[MUTANT_DAPT].tests[SEC_ANT] = test_DAPT_mutant_ant;
-	mds[MUTANT_DAPT].num_conditions[SEC_POST] = 1;
-	mds[MUTANT_DAPT].cond_scores[SEC_POST][0] = CW_A;
-	mds[MUTANT_DAPT].num_conditions[SEC_ANT] = 6;
+	mds[MUTANT_DAPT].num_conditions[SEC_ANT] = 4;
 	mds[MUTANT_DAPT].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_DAPT].cond_scores[SEC_ANT][1] = CW_B;
+	mds[MUTANT_DAPT].cond_scores[SEC_ANT][1] = CW_A;
 	mds[MUTANT_DAPT].cond_scores[SEC_ANT][2] = CW_A;
-	mds[MUTANT_DAPT].cond_scores[SEC_ANT][3] = CW_B;
-	mds[MUTANT_DAPT].cond_scores[SEC_ANT][4] = CW_A;
-	mds[MUTANT_DAPT].cond_scores[SEC_ANT][5] = CW_B;
-	mds[MUTANT_DAPT].num_conditions[SEC_WAVE] = 0;
+	mds[MUTANT_DAPT].cond_scores[SEC_ANT][3] = CW_A;
+    mds[MUTANT_DAPT].print_con= CMDELTA;
 	mds[MUTANT_DAPT].calc_max_scores();
 	
 	
@@ -1226,21 +1024,17 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip) {
 	if (MUTANT_MESPAOVER >= sd.num_active_mutants && single_mutant==false) {return mds;}
 	mds[MUTANT_MESPAOVER].print_name = copy_str("MESPAOVER mutant");
 	mds[MUTANT_MESPAOVER].dir_name = copy_str("MESPAOVER");
-	mds[MUTANT_MESPAOVER].num_knockouts = 0; 
-	
-	//mds[MUTANT_MESPAOVER].induction = ip.DAPT_induction / ip.small_gran;
+	mds[MUTANT_MESPAOVER].num_knockouts = 0;
 	mds[MUTANT_MESPAOVER].induction = ip.mespa_induction / ip.step_size;
     mds[MUTANT_MESPAOVER].recovery = ip.mespa_induction / ip.step_size + (30/sd.step_size);
     mds[MUTANT_MESPAOVER].overexpression_rate = RMSMESPA ;
-    mds[MUTANT_MESPAOVER].overexpression_factor = 2;
+    mds[MUTANT_MESPAOVER].overexpression_factor = 5;
 	mds[MUTANT_MESPAOVER].tests[SEC_POST] = test_MESPAOVER_mutant_post;
 	mds[MUTANT_MESPAOVER].tests[SEC_ANT] = test_MESPAOVER_mutant_ant;
 	mds[MUTANT_MESPAOVER].num_conditions[SEC_POST] = 0;
-	
 	mds[MUTANT_MESPAOVER].num_conditions[SEC_ANT] = 1;
 	mds[MUTANT_MESPAOVER].cond_scores[SEC_ANT][0] = CW_A;
-	
-	mds[MUTANT_MESPAOVER].num_conditions[SEC_WAVE] = 0;
+    mds[MUTANT_MESPAOVER].print_con= CMMESPA;
 	mds[MUTANT_MESPAOVER].calc_max_scores();
 	
 	
@@ -1249,12 +1043,11 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip) {
 	mds[MUTANT_MESPBOVER].print_name = copy_str("MESPbOVER mutant");
 	mds[MUTANT_MESPBOVER].dir_name = copy_str("MESPBOVER");
 	mds[MUTANT_MESPBOVER].num_knockouts = 0; 
-	
-	//mds[MUTANT_MESPBOVER].induction = ip.DAPT_induction / ip.small_gran;
+
 	mds[MUTANT_MESPBOVER].induction = ip.mespb_induction / ip.step_size;
     mds[MUTANT_MESPBOVER].recovery = ip.mespb_induction / ip.step_size + (30/sd.step_size);
     mds[MUTANT_MESPBOVER].overexpression_rate = RMSMESPB;
-    mds[MUTANT_MESPBOVER].overexpression_factor = 2;
+    mds[MUTANT_MESPBOVER].overexpression_factor = 5;
 	mds[MUTANT_MESPBOVER].tests[SEC_POST] = test_MESPBOVER_mutant_post;
 	mds[MUTANT_MESPBOVER].tests[SEC_ANT] = test_MESPBOVER_mutant_ant;
 	mds[MUTANT_MESPBOVER].num_conditions[SEC_POST] = 0;
@@ -1262,8 +1055,7 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip) {
 	mds[MUTANT_MESPBOVER].num_conditions[SEC_ANT] = 2;
 	mds[MUTANT_MESPBOVER].cond_scores[SEC_ANT][0] = CW_A;
 	mds[MUTANT_MESPBOVER].cond_scores[SEC_ANT][1] = CW_A;
-	
-	mds[MUTANT_MESPBOVER].num_conditions[SEC_WAVE] = 0;
+	mds[MUTANT_MESPBOVER].print_con= CMMESPB;
 	mds[MUTANT_MESPBOVER].calc_max_scores();
 	return mds;
 	

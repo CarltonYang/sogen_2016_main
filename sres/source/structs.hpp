@@ -194,7 +194,7 @@ struct input_params {
 	input_params () {
 		this->ranges_file = NULL;
 		this->sim_file = copy_str("../simulation/simulation");
-		this->num_dims = 71;
+		this->num_dims = 43;
 		this->pop_parents = 3;
 		this->pop_total = 20;
 		this->generations = 1750;
