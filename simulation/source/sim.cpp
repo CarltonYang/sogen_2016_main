@@ -203,7 +203,7 @@ void determine_start_end (sim_data& sd) {
     } else {
         sd.time_start = sd.max_delay_size;
         sd.time_end = sd.max_delay_size + sd.steps_total - sd.steps_til_growth;
-        cout<<"MAX DELAY: "<< sd.max_delay_size<<" "<< sd.steps_til_growth<<endl;
+        //cout<<"MAX DELAY: "<< sd.max_delay_size<<" "<< sd.steps_til_growth<<endl;
     }
 }
 
@@ -458,13 +458,14 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
                 mRNA_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_mrna, md, past_induction, past_recovery, avg_delta,avg_rest);
             }
         }
-        
+        /*
         avg_delta/= sd.cells_total;
         avg_rest/= sd.cells_total;
         if (sd.section== SEC_ANT && (md.index== MUTANT_HER1OVER || md.index== MUTANT_MESPAOVER || md.index== MUTANT_MESPBOVER)&& j==62000){
             cout<<"oe "<<md.index<<" " <<md.overexpression_rate<<" "<<md.overexpression_factor<<endl;}
         if (sd.section== SEC_ANT && (md.index== MUTANT_WILDTYPE || md.index== MUTANT_DELTA)&& j==60000){
             cout<<"avg delta "<< avg_delta<<"; avg rest"<<avg_rest<<endl;}
+         */
         // Check to make sure the numbers are still valid
         if (any_less_than_0(baby_cl, baby_j) || concentrations_too_high(baby_cl, baby_j, sd.max_con_thresh)) {
             return false;
@@ -1076,8 +1077,8 @@ inline double transcription_mespb (double** rs, con_levels& cl, int time, int ce
     tmespbmespb = rs[RCRITPMESPBMESPB][cell] == 0 ? 0 : cl.cons[CPMESPBMESPB][time][cell] / (rs[RCRITPMESPBMESPB][cell]);
     //}
     tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : rs[NS2][cell] * avgpd / (rs[RCRITPDELTA][cell]);
-    avg_delta+= tdelta;
-    avg_rest+=(SQUARE(tmespamespa) + SQUARE(tmespbmespb));
+    //avg_delta+= tdelta;
+    //avg_rest+=(SQUARE(tmespamespa) + SQUARE(tmespbmespb));
     //cout<<"Tdelta: "<< tdelta<<" REST: "<<(SQUARE(tmespamespa) + SQUARE(tmespamespb) + SQUARE(tmespbmespb))<<endl;
     //cout<<"OE in mespbover: "<<oe<<endl;
     
