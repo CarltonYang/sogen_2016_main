@@ -30,7 +30,8 @@ Avoid adding biological functions in this file and add them to sim.cpp instead.
 #include "tests.hpp"
 
 using namespace std;
-
+#define STR_EXPAND(tok) #tok
+#define STR(tok) STR_EXPAND(tok)
 
 terminal* term = NULL; // The global terminal struct
 

@@ -17,7 +17,7 @@
  */
 
 #include "sim.hpp" // Function declarations
-
+#include "array2D.hpp"
 #include "debug.hpp"
 #include "feats.hpp"
 #include "init.hpp"
@@ -509,7 +509,7 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
 	notes:
 	todo:
  */
-void calculate_delay_indices (sim_data& sd, con_levels& cl, int baby_time, int time, int cell_index, double* active_rates[], int old_cells_mrna[], int old_cells_protein[]) {
+void calculate_delay_indices (sim_data& sd, con_levels& cl, int baby_time, int time, int cell_index, array2D<double>& active_rates, int old_cells_mrna[], int old_cells_protein[]) {
     if (sd.section == SEC_POST) { // Cells in posterior simulations do not split so the indices never change
         for (int l = 0; l < NUM_INDICES; l++) {
             old_cells_mrna[IMH1 + l] = cell_index;
@@ -712,7 +712,7 @@ void update_rates (rates& rs, int active_start) {
 	151221: Added prtein synthesis for mespa and mespb
  */
 const cph_indices MESPB_INDICES(CMMESPB, CPMESPB, CPMESPBMESPB, RPSMESPB, RPDMESPB, RDAMESPBMESPB, RDDIMESPBMESPB, RDELAYPMESPB, IMESPB, IPMESPB);
-void protein_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc, int old_cells_protein[]) {
+void protein_synthesis (sim_data& sd,array2D<double>& rs, con_levels& cl, st_context& stc, int old_cells_protein[]) {
     double dimer_effects[NUM_HER_INDICES] = {0}; // Heterodimer calculations
     di_args dia(rs, cl, stc, dimer_effects); // WRAPper for repeatedly used structs
     cp_args cpa(sd, rs, cl, stc, old_cells_protein, dimer_effects); // WRAPper for repeatedly used indices
@@ -750,7 +750,7 @@ void protein_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& s
 	todo:
  */
 inline void dim_int (di_args& a, di_indices dii) {
-    double** r = a.rs;
+    array2D<double>& r = a.rs;
     concentration_level<double>& c = a.cl.cons;
     int tp = a.stc.time_prev;
     int cell = a.stc.cell;
@@ -771,7 +771,7 @@ inline void dim_int (di_args& a, di_indices dii) {
 	todo:
  */
 inline void con_protein_her (cp_args& a, cph_indices i) {
-    double** r = a.rs;
+    array2D<double>& r = a.rs;
     concentration_level<double>& c = a.cl.cons;
     int cell = a.stc.cell;
     int delay_steps = r[i.delay_protein][cell] / a.sd.step_size;
@@ -799,7 +799,7 @@ inline void con_protein_her (cp_args& a, cph_indices i) {
 	todo:
  */
 inline void con_protein_delta (cp_args& a, cpd_indices i) {
-    double** r = a.rs;
+    array2D<double>& r = a.rs;
     concentration_level<double>& c = a.cl.cons;
     int cell = a.stc.cell;
     int delay_steps = r[i.delay_protein][cell] / a.sd.step_size;
@@ -826,7 +826,7 @@ inline void con_protein_delta (cp_args& a, cpd_indices i) {
  
 	151221: added dimerization for mespamespa, mespamespb, mespbmespb
  */
-void dimer_proteins (sim_data& sd, double** rs, con_levels& cl, st_context& stc) {
+void dimer_proteins (sim_data& sd, array2D<double>& rs, con_levels& cl, st_context& stc) {
     cd_args cda(sd, rs, cl, stc); // WRAPper for repeatedly used structs
     
     
@@ -855,7 +855,7 @@ void dimer_proteins (sim_data& sd, double** rs, con_levels& cl, st_context& stc)
 	151221: pay attention to the index for mesp genes
  */
 inline void con_dimer (cd_args& a, int con, int offset, cd_indices i) {
-    double** r = a.rs;
+    array2D<double>& r = a.rs;
     concentration_level<double>& c = a.cl.cons;
     int tc = a.stc.time_cur;
     int tp = a.stc.time_prev;
@@ -887,7 +887,7 @@ inline void con_dimer (cd_args& a, int con, int offset, cd_indices i) {
  
 	151221: Added mRNA transcription for meps genes, pay attention to index of mesp genes
  */
-void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc, int old_cells_mrna[], mutant_data& md, bool past_induction, bool past_recovery ) {
+void mRNA_synthesis (sim_data& sd, array2D<double>& rs, con_levels& cl, st_context& stc, int old_cells_mrna[], mutant_data& md, bool past_induction, bool past_recovery ) {
     // Translate delays from minutes to time steps
     int delays[NUM_INDICES];
     for (int j = 0; j < NUM_INDICES; j++) {
@@ -1022,7 +1022,7 @@ void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc,
 	todo:
  TODO clean up these parameters
  */
-inline double transcription (double** rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe) {
+inline double transcription (array2D<double>& rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe) {
     double th1h1= 0, tdelta;
     th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : avgpd / rs[RCRITPDELTA][cell];
@@ -1043,7 +1043,7 @@ inline double transcription (double** rs, con_levels& cl, int time, int cell, do
 	todo:
  TODO clean up these parameters
  */
-inline double transcription_mespa (double** rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe, int section) {
+inline double transcription_mespa (array2D<double>& rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe, int section) {
     double th1h1,  tmespbmespb = 0, tdelta;
     th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     tmespbmespb = rs[RCRITPMESPBMESPB][cell] == 0 ? 0 : cl.cons[CPMESPBMESPB][time][cell] / (rs[RCRITPMESPBMESPB][cell]);
@@ -1066,7 +1066,7 @@ inline double transcription_mespa (double** rs, con_levels& cl, int time, int ce
 	todo:
  TODO clean up these parameters
  */
-inline double transcription_mespb (double** rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe) {
+inline double transcription_mespb (array2D<double>& rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe) {
     double tmespamespa = 0, tmespamespb = 0, tmespbmespb = 0, tdelta;
     //th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     //th7h13 = rs[RCRITPH7H13][cell] == 0 ? 0 : cl.cons[CPH7H13][time][cell] / rs[RCRITPH7H13][cell];
@@ -1176,8 +1176,7 @@ void perturb_rates_all (rates& rs) {
     for (int i = 0; i < NUM_RATES; i++) {
         if (rs.factors_perturb[i] == 0) { // If the current rate has no perturbation factor then set every cell's rate to the base rate
             for (int j = 0; j < rs.cells; j++) {
-                double rnum;
-                rnum=0.082;
+              
                 rs.rates_cell[i][j] = rs.rates_base[i];
             }
         } else { // If the current rate has a perturbation factor then set every cell's rate to a randomly perturbed positive or negative variation of the base with a maximum perturbation up to the rate's perturbation factor

@@ -30,7 +30,7 @@ structs.hpp contains every struct used in the program.
 #include <bitset> // Needed for bitset
 #include <fstream> // Needed for ofstream
 #include <map> // Needed for map
-
+#include "array2D.hpp"
 #include "concentration_level.hpp"
 #include "macros.hpp"
 #include "memory.hpp"
@@ -70,9 +70,9 @@ struct terminal {
 	}
 	
 	~terminal () {
-		mfree(this->blue);
-		mfree(this->red);
-		mfree(this->reset);
+		delete[](this->blue);
+		delete[](this->red);
+		delete[](this->reset);
 		delete verbose_stream;
 	}
 	
@@ -238,15 +238,15 @@ struct input_params {
 	}
 	
 	~input_params () {
-		mfree(this->params_file);
-		mfree(this->perturb_file);
-		mfree(this->gradients_file);
-		mfree(this->passed_file);
-		mfree(this->dir_path);
-		mfree(this->features_file);
-		mfree(this->conditions_file);
-		mfree(this->scores_file);
-		mfree(this->seed_file);
+		delete [](this->params_file);
+		delete [](this->perturb_file);
+		delete [](this->gradients_file);
+		delete [](this->passed_file);
+		delete [](this->dir_path);
+	    delete [](this->features_file);
+		delete [](this->conditions_file);
+		delete [](this->scores_file);
+		delete [](this->seed_file);
 		delete this->null_stream;
 	}
 };
@@ -262,35 +262,43 @@ struct rates {
 	double factors_perturb[NUM_RATES]; // Perturbations (as percentages with 1=100%) taken from the perturbations input file
 	bool using_gradients; // Whether or not any rates have specified perturbations
 	int width; // The total width of the simulation
-	double* factors_gradient[NUM_RATES]; // Gradients (as arrays of (position, percentage with 1=100%) pairs) taken from the gradients input file
+	//double* factors_gradient[NUM_RATES]; // Gradients (as arrays of (position, percentage with 1=100%) pairs) taken from the gradients input file
+	
 	bool has_gradient[NUM_RATES]; // Whether each rate has a specified gradient
 	int cells; // The total number of cells in the simulation
-	double* rates_cell[NUM_RATES]; // Rates per cell that factor in the base rates and each cell's perturbations
-	double* rates_active[NUM_RATES]; // Rates per cell position that factor in the base rates, each cell's perburations, and the gradients at each position
-	
+	//double* rates_cell[NUM_RATES]; // Rates per cell that factor in the base rates and each cell's perturbations
+	//double* rates_active[NUM_RATES]; // Rates per cell position that factor in the base rates, each cell's perburations, and the gradients at each position
+	array2D<double>  rates_active;
+	array2D<double>  rates_cell;
+	array2D<double>  factors_gradient;
 	explicit rates (int width, int cells) {
 		memset(this->rates_base, 0, sizeof(this->rates_base));
 		memset(this->factors_perturb, 0, sizeof(this->factors_perturb));
 		this->using_gradients = false;
 		this->width = width;
 		this->cells = cells;
+		
+		
 		for (int i = 0; i < NUM_RATES; i++) {
-			this->factors_gradient[i] = new double[width];
-			for (int j = 0; j < width; j++) {
-				this->factors_gradient[i][j] = 1;
-			}
+			//this->factors_gradient[i] = new double[width];
+			//for (int j = 0; j < width; j++) {
+			//	this->factors_gradient[i][j] = 1;
+			//}
 			this->has_gradient[i] = false;
-			this->rates_cell[i] = new double[cells];
-			this->rates_active[i] = new double[cells];
+			//this->rates_cell[i] = new double[cells];
+			//this->rates_active[i] = new double[cells];
 		}
+		factors_gradient.initialize1(NUM_RATES, width);
+		rates_active.initialize(NUM_RATES,cells);
+		rates_cell.initialize(NUM_RATES,cells);
 	}
 	
 	~rates () {
-		for (int i = 0; i < NUM_RATES; i++) {
+		/*for (int i = 0; i < NUM_RATES; i++) {
 			delete[] this->factors_gradient[i];
 			delete[] this->rates_cell[i];
 			delete[] this->rates_active[i];
-		}
+		}*/
 	}
 };
 
@@ -520,8 +528,8 @@ struct mutant_data {
 	}
 	
 	~mutant_data () {
-		mfree(this->print_name);
-		mfree(this->dir_name);
+		delete [](this->print_name);
+		delete [](this->dir_name);
 		this->cl.clear();
 	}
 	
@@ -662,7 +670,7 @@ struct input_data {
 	}
 	
 	~input_data () {
-		mfree(this->buffer);
+		delete [](this->buffer);
 	}
 };
 
@@ -689,12 +697,12 @@ struct st_context {
 	todo:
 */
 struct di_args {
-	double** rs; // Active rates
+	array2D<double>& rs; // Active rates
 	con_levels& cl; // Concentration levels
 	st_context& stc; // Spatiotemporal context
 	double* dimer_effects; // An array of dimer effects to store in which to store the results of dim_int
 	
-	explicit di_args (double** rs, con_levels& cl, st_context& stc, double dimer_effects[]) :
+	explicit di_args (array2D<double>& rs, con_levels& cl, st_context& stc, double dimer_effects[]) :
 		rs(rs), cl(cl), stc(stc), dimer_effects(dimer_effects)
 	{}
 };
@@ -724,13 +732,13 @@ struct di_indices {
 */
 struct cp_args {
 	sim_data& sd; // Simulation data
-	double** rs; // Active rates
+	array2D<double>& rs; // Active rates
 	con_levels& cl; // Concentration levels
 	st_context& stc; // Spatiotemporal context
 	int* old_cells; // An array of cell indices at the start of each protein's delay
 	double* dimer_effects; // An array of dimer effects calculated by dim_int
 	
-	explicit cp_args (sim_data& sd, double** rs, con_levels& cl, st_context& stc, int old_cells[], double dimer_effects[]) :
+	explicit cp_args (sim_data& sd, array2D<double>& rs, con_levels& cl, st_context& stc, int old_cells[], double dimer_effects[]) :
 		sd(sd), rs(rs), cl(cl), stc(stc), old_cells(old_cells), dimer_effects(dimer_effects)
 	{}
 };
@@ -782,11 +790,11 @@ struct cpd_indices {
 */
 struct cd_args {
 	sim_data& sd; // Simulation data
-	double** rs; // Active rates
+	array2D<double>& rs; // Active rates
 	con_levels& cl; // Concentration levels
 	st_context& stc; // Spatiotemporal context
 	
-	explicit cd_args (sim_data& sd, double** rs, con_levels& cl, st_context& stc) :
+	explicit cd_args (sim_data& sd,array2D<double>& rs, con_levels& cl, st_context& stc) :
 		sd(sd), rs(rs), cl(cl), stc(stc)
 	{}
 };

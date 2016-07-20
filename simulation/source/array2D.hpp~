@@ -5,8 +5,8 @@
 //  Created by aylab on 7/18/16.
 //
 //
-#ifndef CONCENTRATION_LEVEL_HPP
-#define CONCENTRATION_LEVEL_HPP
+#ifndef ARRAY2D_HPP
+#define ARRAY2D_HPP
 #include <stdlib.h>
 #include <cuda_runtime_api.h>
 #include <cuda.h>
@@ -20,7 +20,7 @@
 #endif
 
 template<class T>
-class concentration_level{
+class array2D{
 public:
     
     class cell{
@@ -40,71 +40,58 @@ public:
     };
 
 
-    class timespan{
-    public:
-        CPUGPU_FUNC timespan(T *plane,int width, bool cuda): _array(plane), _width(width), _cuda(cuda){};
-        CPUGPU_FUNC cell operator[](int j) {
-            if (_cuda){
-				cell temp(_darray+_width*j, _cuda);
-       			return temp;
-			}		
-			else{
-				cell temp(_array+_width*j, _cuda);
-        		return temp;
-			}
-        }
-
-        CPUGPU_FUNC const cell operator[](int j) const{
-            if (_cuda){
-				cell temp(_darray+_width*j, _cuda);
-       			return temp;
-			}		
-			else{
-				cell temp(_array+_width*j, _cuda);
-        		return temp;
-			}
-        }
-        T *_array;
-		T *_darray;
-		bool _cuda;
-        int _width;
-    };
-    concentration_level(int height =0, int length =0, int width =0)
-		:_height(height),_length(length),_width(width),_cuda(false){
+   
+    array2D(int height =0,  int width =0)
+		:_height(height),_width(width),_cuda(false){
         allocate_array();
     }
     
-    concentration_level(const concentration_level<T>& other)
-		:_height(other._height),_length(other._length),_width(other._width),_cuda(other._cuda){
+    array2D(const array2D<T>& other)
+		:_height(other._height),_width(other._width),_cuda(other._cuda){
         allocate_array();
         for (int he=0; he< _height; he++){
-            for (int le=0; le< _length; le++){
                 for (int wi=0; wi< _width; wi++){
-                    _array[he*_length*_width+le*_width+wi]=other._array[he*_length*_width+le*_width+wi];
-					_darray[he*_length*_width+le*_width+wi]=other._darray[he*_length*_width+le*_width+wi];
+                    _array[he*_width+wi]=other._array[he*_width+wi];
+					_darray[he*_width+wi]=other._darray[he*_width+wi];
                 }
-            }
+            
         }
     }
     
-    void initialize(int height, int length, int width){
+	void initialize(int height, int width){
         dealloc_array();
         _width=width;
         _height=height;
-        _length=length;
 		_cuda=false;
         allocate_array();
         reset();
     }
+
+    void initialize1(int height, int width){
+        dealloc_array();
+        _width=width;
+        _height=height;
+		_cuda=false;
+        allocate_array();
+        set1();
+    }
     
-    void reset(){
+
+	void set1(){
         for (int i = 0; i < _height; i++) {
-            for (int j = 0; j < _length; j++) {
                 for (int k = 0; k < _width; k++) {
-                    _array[i*_length*_width+j*_width+k] = 0; // Initialize every concentration level at every time step for every cell to 0
+                    _array[i*_width+k] = 1; // Initialize every concentration level at every time step for every cell to 0
 					
                 }
-            }
+        }
+    }
+
+    void reset(){
+        for (int i = 0; i < _height; i++) {
+                for (int k = 0; k < _width; k++) {
+                    _array[i*_width+k] = 0; // Initialize every concentration level at every time step for every cell to 0
+					
+                }
         }
     }
     
@@ -125,34 +112,33 @@ public:
         return *this;
     }
     */
-	CPUGPU_FUNC timespan operator[](int i){
+	CPUGPU_FUNC cell operator[](int i){
 		if (_cuda){
-			timespan temp(_darray+_length*_width*i, _width, _cuda);
+			cell temp(_darray+_width*i,  _cuda);
        		return temp;
 		}		
 		else{
-			timespan temp(_array+_length*_width*i, _width, _cuda);
+			cell temp(_array+_width*i,  _cuda);
         	return temp;
 		}		
 	}
 	
-    CPUGPU_FUNC const timespan operator[](int i) const{
+    CPUGPU_FUNC const cell operator[](int i) const{
 		if (_cuda){
-			timespan temp(_darray+_length*_width*i, _width, _cuda);
+			cell temp(_darray+_width*i, _cuda);
        		return temp;
 		}		
 		else{
-			timespan temp(_array+_length*_width*i, _width, _cuda);
+			cell temp(_array+_width*i, _cuda);
         	return temp;
 		}		
 	}
     
-    ~concentration_level() {
+    ~array2D() {
         dealloc_array();
     }
     
     int height() const {return _height;}
-    int length() const {return _length;}
     int width() const {return _width;}
     CPUGPU_FUNC bool getStatus() { return _cuda; }
 
@@ -160,7 +146,7 @@ public:
 		if(!_cuda){
 			return;
 		}	
-		int size = _height*_length*_width* sizeof(T);
+		int size = _height*_width* sizeof(T);
 		cudaMalloc((void**)&_darray, size);
 		cudaMemcpy(_darray,_array,size,cudaMemcpyHostToDevice);
 		_cuda=true;
@@ -170,7 +156,7 @@ public:
 		if(!_cuda){
 			return;
 		}
-		int size = _height*_length*_width* sizeof(T);
+		int size = _height*_width* sizeof(T);
 		cudaMemcpy(_array, _darray, size, cudaMemcpyDeviceToHost);
 		cudaFree(_darray);
 		_darray = NULL;
@@ -185,8 +171,8 @@ protected:
     }
 	
     void allocate_array(){
-        if (_width*_length*_height >0){
-            _array= new T[_height*_length*_width];
+        if (_width*_height >0){
+            _array= new T[_height*_width];
 			if (_array == NULL){std::cout<<"ERROR"<<std::endl; exit(EXIT_MEMORY_ERROR);}
         }
         else{
@@ -195,7 +181,7 @@ protected:
     }
     
     
-    int   _height,_length, _width;
+    int   _height, _width;
 	bool _cuda;
     T *_array;
 	T *_darray;

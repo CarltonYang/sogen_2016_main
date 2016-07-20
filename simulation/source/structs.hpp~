@@ -30,7 +30,8 @@ structs.hpp contains every struct used in the program.
 #include <bitset> // Needed for bitset
 #include <fstream> // Needed for ofstream
 #include <map> // Needed for map
-
+#include "array2D.hpp"
+#include "concentration_level.hpp"
 #include "macros.hpp"
 #include "memory.hpp"
 
@@ -69,9 +70,9 @@ struct terminal {
 	}
 	
 	~terminal () {
-		mfree(this->blue);
-		mfree(this->red);
-		mfree(this->reset);
+		delete[](this->blue);
+		delete[](this->red);
+		delete[](this->reset);
 		delete verbose_stream;
 	}
 	
@@ -153,9 +154,9 @@ struct input_params {
 	int height; // The height of the tissue, default=1
 	
 	// Simulation details
-	int time_total; // The number of minutes to run each simulation for, default=1200
+	int time_total; // The number of minutes to run each simulation for, default=930
 	int time_split; // The number of minutes it takes for cells to split, default=6
-	int time_til_growth; // The number of minutes to wait before allowing cells to grow into the anterior PSM, default=600
+	int time_til_growth; // The number of minutes to wait before allowing cells to grow into the anterior PSM, default=300
 	int seed; // The seed, used for generating random numbers, default=generated from the time and process ID
 	bool reset_seed; // Whether or not to reset the seed after each parameter set, default=false
 	int pseed; // The seed, used for generating random parameter sets, default=generated from the time and process ID
@@ -171,6 +172,8 @@ struct input_params {
 	int her1_induction; // The time point of the induction of her1 overexpression
 	int her7_induction; // The time point of the induction of her7 overexpression
 	int DAPT_induction; // The time point of the induction of NICD perturbation
+	int mespa_induction; // The time point of the induction of mespa overexpression
+	int mespb_induction; // The time point of the induction of mespb overexpression
 	
 	// Piping data
 	bool piping; // Whether or not input and output should be piped (as opposed to written to disk), default=false
@@ -212,9 +215,9 @@ struct input_params {
 		this->width_total = 3;
 		this->width_initial = 3;
 		this->height = 1;
-		this->time_total = 1200;
+		this->time_total = 930;
 		this->time_split = 6;
-		this->time_til_growth = 600;
+		this->time_til_growth = 300;
 		this->seed = 0;
 		this->reset_seed = false;
 		this->pseed = 0;
@@ -235,15 +238,15 @@ struct input_params {
 	}
 	
 	~input_params () {
-		mfree(this->params_file);
-		mfree(this->perturb_file);
-		mfree(this->gradients_file);
-		mfree(this->passed_file);
-		mfree(this->dir_path);
-		mfree(this->features_file);
-		mfree(this->conditions_file);
-		mfree(this->scores_file);
-		mfree(this->seed_file);
+		delete [](this->params_file);
+		delete [](this->perturb_file);
+		delete [](this->gradients_file);
+		delete [](this->passed_file);
+		delete [](this->dir_path);
+	    delete [](this->features_file);
+		delete [](this->conditions_file);
+		delete [](this->scores_file);
+		delete [](this->seed_file);
 		delete this->null_stream;
 	}
 };
@@ -259,35 +262,43 @@ struct rates {
 	double factors_perturb[NUM_RATES]; // Perturbations (as percentages with 1=100%) taken from the perturbations input file
 	bool using_gradients; // Whether or not any rates have specified perturbations
 	int width; // The total width of the simulation
-	double* factors_gradient[NUM_RATES]; // Gradients (as arrays of (position, percentage with 1=100%) pairs) taken from the gradients input file
+	//double* factors_gradient[NUM_RATES]; // Gradients (as arrays of (position, percentage with 1=100%) pairs) taken from the gradients input file
+	
 	bool has_gradient[NUM_RATES]; // Whether each rate has a specified gradient
 	int cells; // The total number of cells in the simulation
-	double* rates_cell[NUM_RATES]; // Rates per cell that factor in the base rates and each cell's perturbations
-	double* rates_active[NUM_RATES]; // Rates per cell position that factor in the base rates, each cell's perburations, and the gradients at each position
-	
+	//double* rates_cell[NUM_RATES]; // Rates per cell that factor in the base rates and each cell's perturbations
+	//double* rates_active[NUM_RATES]; // Rates per cell position that factor in the base rates, each cell's perburations, and the gradients at each position
+	array2D<double>  rates_active;
+	array2D<double>  rates_cell;
+	array2D<double>  factors_gradient;
 	explicit rates (int width, int cells) {
 		memset(this->rates_base, 0, sizeof(this->rates_base));
 		memset(this->factors_perturb, 0, sizeof(this->factors_perturb));
 		this->using_gradients = false;
 		this->width = width;
 		this->cells = cells;
+		
+		
 		for (int i = 0; i < NUM_RATES; i++) {
-			this->factors_gradient[i] = new double[width];
-			for (int j = 0; j < width; j++) {
-				this->factors_gradient[i][j] = 1;
-			}
+			//this->factors_gradient[i] = new double[width];
+			//for (int j = 0; j < width; j++) {
+			//	this->factors_gradient[i][j] = 1;
+			//}
 			this->has_gradient[i] = false;
-			this->rates_cell[i] = new double[cells];
-			this->rates_active[i] = new double[cells];
+			//this->rates_cell[i] = new double[cells];
+			//this->rates_active[i] = new double[cells];
 		}
+		factors_gradient.initialize1(NUM_RATES, width);
+		rates_active.initialize(NUM_RATES,cells);
+		rates_cell.initialize(NUM_RATES,cells);
 	}
 	
 	~rates () {
-		for (int i = 0; i < NUM_RATES; i++) {
+		/*for (int i = 0; i < NUM_RATES; i++) {
 			delete[] this->factors_gradient[i];
 			delete[] this->rates_cell[i];
 			delete[] this->rates_active[i];
-		}
+		}*/
 	}
 };
 
@@ -301,7 +312,7 @@ struct con_levels {
 	int num_con_levels; // The number of concentration levels this struct stores (not necessarily the total number of concentration levels)
 	int time_steps; // The number of time steps this struct stores concentrations for
 	int cells; // The number of cells this struct stores concentrations for
-	double*** cons; // A three dimensional array that stores [concentration levels][time steps][cells] in that order
+	concentration_level<double> cons; // A three dimensional array that stores [concentration levels][time steps][cells] in that order
 	int* active_start_record; // Record of the start of the active PSM at each time step
 	int* active_end_record; // Record of the end of the active PSM at each time step
 	
@@ -328,17 +339,9 @@ struct con_levels {
 			this->active_start_record[0] = active_start; // Initialize the active start record with the given position
 			this->active_end_record = new int[time_steps];
 			this->active_end_record[0] = 0; // Initialize the active end record at position 0
-		
-			this->cons = new double**[num_con_levels];
-			for (int i = 0; i < num_con_levels; i++) {
-				this->cons[i] = new double*[time_steps];
-				for (int j = 0; j < time_steps; j++) {
-					this->cons[i][j] = new double[cells];
-					for (int k = 0; k < cells; k++) {
-						this->cons[i][j][k] = 0; // Initialize every concentration level at every time step for every cell to 0
-					}
-				}
-			}
+            cons.initialize(num_con_levels,time_steps,cells);
+			
+			
 			for (int j = 1; j < time_steps; j++) {
 				this->active_start_record[j] = 0;
 		        this->active_end_record[j] = 0;
@@ -350,13 +353,8 @@ struct con_levels {
 	// Sets every value in the struct to 0 but does not free any memory
 	void reset () {
 		if (this->initialized) {
-			for (int i = 0; i < this->num_con_levels; i++) {
-				for (int j = 0; j < this->time_steps; j++) {
-					for (int k = 0; k < this->cells; k++) {
-						this->cons[i][j][k] = 0;
-					}
-				}
-			}
+            this->cons.reset();
+            
 			for (int j = 0; j < this->time_steps; j++) {
 				this->active_start_record[j] = 0;
 				this->active_end_record[j] = 0;
@@ -367,13 +365,8 @@ struct con_levels {
 	// Frees the memory used by the struct
 	void clear () {
 		if (this->initialized) {
-			for (int i = 0; i < this->num_con_levels; i++) {
-				for (int j = 0; j < this->time_steps; j++) {
-					delete[] this->cons[i][j];
-				}
-				delete[] this->cons[i];
-			}
-			delete[] this->cons;
+
+            
 			delete[] this->active_start_record;
             delete[] this->active_end_record;
 			this->initialized = false;
@@ -436,45 +429,53 @@ struct growin_array {
 	todo:
 */
 struct features {
-	double period_post[NUM_INDICES]; // The period of oscillations for relevant concentrations in the posterior
-	double period_ant[NUM_INDICES]; // The period of oscillations for relevant concentrations in the anterior
-	double amplitude_post[NUM_INDICES]; // The amplitude of oscillations for relevant concentrations in the posterior
-	double amplitude_ant[NUM_INDICES]; // The amplitude of oscillations for relevant concentrations in the anterior
-	double peaktotrough_mid[NUM_INDICES]; // The peak to trough ratio for relevant concentrations in the middle of the simulation time-wise
-	double peaktotrough_end[NUM_INDICES]; // The peak to trough ratio for relevant concentrations at the end of the simulation time-wise
-	double sync_score_post[NUM_INDICES]; // The synchronization score for the relevant concentrations in the posterior
+	double period_post; // The period of oscillations for relevant concentrations in the posterior
+	//double period_ant[NUM_INDICES]; // The period of oscillations for relevant concentrations in the anterior
+	//double amplitude_post[NUM_INDICES]; // The amplitude of oscillations for relevant concentrations in the posterior
+	//double amplitude_ant[NUM_INDICES]; // The amplitude of oscillations for relevant concentrations in the anterior
+	double peaktotrough_mid; // The peak to trough ratio for relevant concentrations in the middle of the simulation time-wise
+	double peaktotrough_end; // The peak to trough ratio for relevant concentrations at the end of the simulation time-wise
+	//double sync_score_post[NUM_INDICES]; // The synchronization score for the relevant concentrations in the posterior
 	double sync_score_ant[NUM_INDICES]; // The synchronization score for the relevant concentrations in the anterior
     double comp_score_ant_mespa; // The score for the complementary expression of her and mespa
     double comp_score_ant_mespb; // The score for the complementary expression of her and mespb
-	double num_good_somites[NUM_INDICES]; // The number of good somites for the relevant concentrations
-    map<int, double> period_post_time[NUM_INDICES]; // The period in the posterior at various time points in the simulation
-    map<int, double> amplitude_post_time[NUM_INDICES]; // The amplitude in the posterior at various time points in the simulation
-    map<int, double> period_ant_time[NUM_INDICES]; // The period in the anterior at various time points in the simulation
-    map<int, double> amplitude_ant_time[NUM_INDICES]; // The amplitude in the anterior at various time points in the simulaiton
-    map<int, double> sync_time[NUM_INDICES]; // The amplitude in the anterior at various time points in the simulation
+	//double num_good_somites[NUM_INDICES]; // The number of good somites for the relevant concentrations
+    //map<int, double> period_post_time[NUM_INDICES]; // The period in the posterior at various time points in the simulation
+   	//map<int, double> amplitude_post_time[NUM_INDICES]; // The amplitude in the posterior at various time points in the simulation
+   	//map<int, double> period_ant_time[NUM_INDICES]; // The period in the anterior at various time points in the simulation
+   	map<int, double> amplitude_ant_time[NUM_INDICES]; // The amplitude in the anterior at various time points in the simulaiton
+    //map<int, double> sync_time[NUM_INDICES]; // The amplitude in the anterior at various time points in the simulation
 	
 	features () {
-		memset(period_post, 0, sizeof(period_post));
-		memset(period_ant, 0, sizeof(period_ant));
-		memset(amplitude_post, 0, sizeof(amplitude_post));
-		memset(amplitude_ant, 0, sizeof(amplitude_ant));
-		memset(peaktotrough_mid, 0, sizeof(peaktotrough_mid));
-		memset(peaktotrough_end, 0, sizeof(peaktotrough_end));
-		memset(sync_score_post, 0, sizeof(sync_score_post));
-		memset(num_good_somites, 0, sizeof(num_good_somites));
+		//memset(period_post, 0, sizeof(period_post));
+		//memset(period_ant, 0, sizeof(period_ant));
+        period_post=0;
+		//memset(amplitude_post, 0, sizeof(amplitude_post));
+		//memset(amplitude_ant, 0, sizeof(amplitude_ant));
+		//memset(peaktotrough_mid, 0, sizeof(peaktotrough_mid));
+		//memset(peaktotrough_end, 0, sizeof(peaktotrough_end));
+        peaktotrough_mid=0;
+        peaktotrough_end=0;
+		//memset(sync_score_post, 0, sizeof(sync_score_post));
+		memset(sync_score_ant, 0, sizeof(sync_score_ant));
+		//memset(num_good_somites, 0, sizeof(num_good_somites));
         comp_score_ant_mespa = 0;
         comp_score_ant_mespb = 0;
 	}
 	
 	void reset () {
-		memset(period_post, 0, sizeof(period_post));
-		memset(period_ant, 0, sizeof(period_ant));
-		memset(amplitude_post, 0, sizeof(amplitude_post));
-		memset(amplitude_ant, 0, sizeof(amplitude_ant));
-		memset(peaktotrough_mid, 0, sizeof(peaktotrough_mid));
-		memset(peaktotrough_end, 0, sizeof(peaktotrough_end));
-		memset(sync_score_post, 0, sizeof(sync_score_post));
-		memset(num_good_somites, 0, sizeof(num_good_somites));
+		//memset(period_post, 0, sizeof(period_post));
+		//memset(period_ant, 0, sizeof(period_ant));
+		period_post=0;
+        //(amplitude_post, 0, sizeof(amplitude_post));
+		//memset(amplitude_ant, 0, sizeof(amplitude_ant));
+		//memset(peaktotrough_mid, 0, sizeof(peaktotrough_mid));
+		//memset(peaktotrough_end, 0, sizeof(peaktotrough_end));
+        peaktotrough_mid=0;
+        peaktotrough_end=0;
+		//memset(sync_score_post, 0, sizeof(sync_score_post));
+		memset(sync_score_ant, 0, sizeof(sync_score_ant));
+		//memset(num_good_somites, 0, sizeof(num_good_somites));
         comp_score_ant_mespa = 0;
         comp_score_ant_mespb = 0;
 	}
@@ -497,14 +498,14 @@ struct mutant_data {
 	con_levels cl; // The concentration levels at the end of this mutant's posterior simulation run
 	double (*tests[2])(mutant_data&, features&); // The posterior and anterior conditions tests
 	int (*wave_test)(pair<int, int>[], int, mutant_data&, int, int); // The traveling wave conditions test
-	int num_conditions[NUM_SECTIONS]; // The number of conditions this mutant is tested on
-	double cond_scores[NUM_SECTIONS][MAX_CONDS_ANY]; // The score this mutant can achieve for each condition
+	int num_conditions[NUM_SECTIONS+1]; // The number of conditions this mutant is tested on
+	double cond_scores[NUM_SECTIONS+1][MAX_CONDS_ANY]; // The score this mutant can achieve for each condition
 	double max_cond_scores[NUM_SECTIONS]; // The maximum score this mutant can achieve for each section
 	bool secs_passed[NUM_SECTIONS]; // Whether or not this mutant has passed each section's conditions
 	double conds_passed[NUM_SECTIONS][1 + MAX_CONDS_ANY]; // The score this mutant achieved for each condition when run
 	features feat; // The oscillation features this mutant produced when run
 	int print_con; // The index of the concentration that should be printed (usually mh1)
-	
+    bool only_post; //indicating if only the posterior is simulated
 	mutant_data () {
 		this->index = 0;
 		this->print_name = NULL;
@@ -519,25 +520,28 @@ struct mutant_data {
 		this->wave_test = NULL;
 		memset(this->num_conditions, 0, sizeof(this->num_conditions));
 		memset(this->cond_scores, 0, sizeof(this->cond_scores));
+		memset(this->conds_passed, 0, sizeof(this->conds_passed));
 		memset(this->max_cond_scores, 0, sizeof(this->max_cond_scores));
 		memset(this->secs_passed, false, sizeof(this->secs_passed));
 		this->print_con = CMH1;
+        only_post=false;
 	}
 	
 	~mutant_data () {
-		mfree(this->print_name);
-		mfree(this->dir_name);
+		delete [](this->print_name);
+		delete [](this->dir_name);
 		this->cl.clear();
 	}
 	
 	// Calculates the maximum score this mutant can achieve for each section based on the scores given for each condition
 	void calc_max_scores () {
-		for (int i = 0; i < NUM_SECTIONS; i++) {
-			this->max_cond_scores[i] = 0;
-			for (int j = 0; j < this->num_conditions[i]; j++) {
-				this->max_cond_scores[i] += this->cond_scores[i][j];
-			}
-		}
+            //cout<<"1 "<<endl;
+            for (int i = 0; i < NUM_SECTIONS; i++) {
+                this->max_cond_scores[i] = 0;
+                for (int j = 0; j < this->num_conditions[i]; j++) {
+                    this->max_cond_scores[i] += this->cond_scores[i][j];
+                }
+            }
 	}
 };
 
@@ -666,7 +670,7 @@ struct input_data {
 	}
 	
 	~input_data () {
-		mfree(this->buffer);
+		delete [](this->buffer);
 	}
 };
 
@@ -693,12 +697,12 @@ struct st_context {
 	todo:
 */
 struct di_args {
-	double** rs; // Active rates
+	array2D<double>& rs; // Active rates
 	con_levels& cl; // Concentration levels
 	st_context& stc; // Spatiotemporal context
 	double* dimer_effects; // An array of dimer effects to store in which to store the results of dim_int
 	
-	explicit di_args (double** rs, con_levels& cl, st_context& stc, double dimer_effects[]) :
+	explicit di_args (array2D<double>& rs, con_levels& cl, st_context& stc, double dimer_effects[]) :
 		rs(rs), cl(cl), stc(stc), dimer_effects(dimer_effects)
 	{}
 };
@@ -728,13 +732,13 @@ struct di_indices {
 */
 struct cp_args {
 	sim_data& sd; // Simulation data
-	double** rs; // Active rates
+	array2D<double>& rs; // Active rates
 	con_levels& cl; // Concentration levels
 	st_context& stc; // Spatiotemporal context
 	int* old_cells; // An array of cell indices at the start of each protein's delay
 	double* dimer_effects; // An array of dimer effects calculated by dim_int
 	
-	explicit cp_args (sim_data& sd, double** rs, con_levels& cl, st_context& stc, int old_cells[], double dimer_effects[]) :
+	explicit cp_args (sim_data& sd, array2D<double>& rs, con_levels& cl, st_context& stc, int old_cells[], double dimer_effects[]) :
 		sd(sd), rs(rs), cl(cl), stc(stc), old_cells(old_cells), dimer_effects(dimer_effects)
 	{}
 };
@@ -786,11 +790,11 @@ struct cpd_indices {
 */
 struct cd_args {
 	sim_data& sd; // Simulation data
-	double** rs; // Active rates
+	array2D<double>& rs; // Active rates
 	con_levels& cl; // Concentration levels
 	st_context& stc; // Spatiotemporal context
 	
-	explicit cd_args (sim_data& sd, double** rs, con_levels& cl, st_context& stc) :
+	explicit cd_args (sim_data& sd,array2D<double>& rs, con_levels& cl, st_context& stc) :
 		sd(sd), rs(rs), cl(cl), stc(stc)
 	{}
 };

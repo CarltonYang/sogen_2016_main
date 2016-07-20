@@ -27,8 +27,8 @@ memory.hpp contains function declarations for memory.cpp.
 
 using namespace std;
 
-//void* mallocate(size_t);
-//void mfree(void*);
+void* mallocate(size_t);
+void mfree(void*);
 #if defined(MEMTRACK)
 	void print_heap_usage();
 #endif
