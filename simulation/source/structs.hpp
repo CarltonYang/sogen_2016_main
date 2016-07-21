@@ -31,7 +31,7 @@ structs.hpp contains every struct used in the program.
 #include <fstream> // Needed for ofstream
 #include <map> // Needed for map
 
-#include "concentration_level.hpp"
+#include "concentration_level.hpp" //a class needed for faster 3D array access
 #include "macros.hpp"
 #include "memory.hpp"
 
@@ -305,6 +305,7 @@ struct con_levels {
 	int time_steps; // The number of time steps this struct stores concentrations for
 	int cells; // The number of cells this struct stores concentrations for
 	concentration_level<double> cons; // A three dimensional array that stores [concentration levels][time steps][cells] in that order
+    //NOTE: potentially can be done to all 2D arrays to reduce runtime, not done not because of time; 2D array.hpp is ready
 	int* active_start_record; // Record of the start of the active PSM at each time step
 	int* active_end_record; // Record of the end of the active PSM at each time step
 	
@@ -331,7 +332,7 @@ struct con_levels {
 			this->active_start_record[0] = active_start; // Initialize the active start record with the given position
 			this->active_end_record = new int[time_steps];
 			this->active_end_record[0] = 0; // Initialize the active end record at position 0
-            cons.initialize(num_con_levels,time_steps,cells);
+            cons.initialize(num_con_levels,time_steps,cells);// Initialize cons to 0, written in concentration_level.hpp
 			
 			
 			for (int j = 1; j < time_steps; j++) {
@@ -345,7 +346,7 @@ struct con_levels {
 	// Sets every value in the struct to 0 but does not free any memory
 	void reset () {
 		if (this->initialized) {
-            this->cons.reset();
+            this->cons.reset();// Reset cons to 0, written in concentration_level.hpp
             
 			for (int j = 0; j < this->time_steps; j++) {
 				this->active_start_record[j] = 0;
@@ -420,54 +421,29 @@ struct growin_array {
 	notes:
 	todo:
 */
-struct features {
+struct features { //took out all unnecessary attributes 2016
 	double period_post; // The period of oscillations for relevant concentrations in the posterior
-	//double period_ant[NUM_INDICES]; // The period of oscillations for relevant concentrations in the anterior
-	//double amplitude_post[NUM_INDICES]; // The amplitude of oscillations for relevant concentrations in the posterior
-	//double amplitude_ant[NUM_INDICES]; // The amplitude of oscillations for relevant concentrations in the anterior
-	double peaktotrough_mid; // The peak to trough ratio for relevant concentrations in the middle of the simulation time-wise
+    double peaktotrough_mid; // The peak to trough ratio for relevant concentrations in the middle of the simulation time-wise
 	double peaktotrough_end; // The peak to trough ratio for relevant concentrations at the end of the simulation time-wise
-	//double sync_score_post[NUM_INDICES]; // The synchronization score for the relevant concentrations in the posterior
 	double sync_score_ant[NUM_INDICES]; // The synchronization score for the relevant concentrations in the anterior
     double comp_score_ant_mespa; // The score for the complementary expression of her and mespa
     double comp_score_ant_mespb; // The score for the complementary expression of her and mespb
-	//double num_good_somites[NUM_INDICES]; // The number of good somites for the relevant concentrations
-    //map<int, double> period_post_time[NUM_INDICES]; // The period in the posterior at various time points in the simulation
-   	//map<int, double> amplitude_post_time[NUM_INDICES]; // The amplitude in the posterior at various time points in the simulation
-   	//map<int, double> period_ant_time[NUM_INDICES]; // The period in the anterior at various time points in the simulation
    	map<int, double> amplitude_ant_time[NUM_INDICES]; // The amplitude in the anterior at various time points in the simulaiton
-    //map<int, double> sync_time[NUM_INDICES]; // The amplitude in the anterior at various time points in the simulation
-	
+  
 	features () {
-		//memset(period_post, 0, sizeof(period_post));
-		//memset(period_ant, 0, sizeof(period_ant));
         period_post=0;
-		//memset(amplitude_post, 0, sizeof(amplitude_post));
-		//memset(amplitude_ant, 0, sizeof(amplitude_ant));
-		//memset(peaktotrough_mid, 0, sizeof(peaktotrough_mid));
-		//memset(peaktotrough_end, 0, sizeof(peaktotrough_end));
         peaktotrough_mid=0;
         peaktotrough_end=0;
-		//memset(sync_score_post, 0, sizeof(sync_score_post));
 		memset(sync_score_ant, 0, sizeof(sync_score_ant));
-		//memset(num_good_somites, 0, sizeof(num_good_somites));
         comp_score_ant_mespa = 0;
         comp_score_ant_mespb = 0;
 	}
 	
 	void reset () {
-		//memset(period_post, 0, sizeof(period_post));
-		//memset(period_ant, 0, sizeof(period_ant));
 		period_post=0;
-        //(amplitude_post, 0, sizeof(amplitude_post));
-		//memset(amplitude_ant, 0, sizeof(amplitude_ant));
-		//memset(peaktotrough_mid, 0, sizeof(peaktotrough_mid));
-		//memset(peaktotrough_end, 0, sizeof(peaktotrough_end));
         peaktotrough_mid=0;
         peaktotrough_end=0;
-		//memset(sync_score_post, 0, sizeof(sync_score_post));
 		memset(sync_score_ant, 0, sizeof(sync_score_ant));
-		//memset(num_good_somites, 0, sizeof(num_good_somites));
         comp_score_ant_mespa = 0;
         comp_score_ant_mespb = 0;
 	}

@@ -7,7 +7,7 @@
 //
 #ifndef CONCENTRATION_LEVEL_HPP
 #define CONCENTRATION_LEVEL_HPP
-
+#include <stddef.h>
 template<class T>
 class concentration_level{
 public:
@@ -37,7 +37,7 @@ public:
         allocate_array();
     }
     
-    concentration_level(const concentration_level<T>& other):_height(height),_length(length),_width(width){
+    concentration_level(const concentration_level<T>& other):_height(other._height),_length(other._length),_width(other._width){
         allocate_array();
         for (int he; he< _height; he++){
             for (int le; le< _length; le++){

@@ -214,7 +214,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 			features_files[PERIOD] << sd.height << "," << sd.width_total << endl;
 			features_files[AMPLITUDE] << sd.height << "," << sd.width_total << endl;
 		}
-		if (md.index == MUTANT_WILDTYPE && (mr == CMH1 || mr == CMMESPA)) {
+		if (md.index == MUTANT_WILDTYPE && (mr == CMH1 || mr == CMMESPA)) { // following only done for CMH1 and CMMESPA in wildtype to prevent unnecessary repeating
             double period_avg = 0;
             int time_start= anterior_time(sd, sd.steps_til_growth + (sd.width_total - sd.width_initial) * sd.steps_split); // time after which the PSM is full of cells
             int num_cells_passed = 0;
@@ -721,48 +721,40 @@ void osc_features_post (sim_data& sd, input_params& ip, con_levels& cl, features
     }
 }
 
+
+/*
+ * calculate the amplitude 
+ * take 10 lowest and hightest amplitude and calculate average seperately 
+ * return max- min for amplitude
+ */
+
 double amp_10 (sim_data& sd, con_levels& cl, int con, int time){
-    double* tosort= new double[sd.cells_total];
-    bool toprint= false;
+    double* tosort= new double[sd.cells_total];       // allocate an array
     
-    for (int i=0 ; i< sd.cells_total; i++ ){
+    for (int i=0 ; i< sd.cells_total; i++ ){           // put cons in one timestep into this array
         tosort[i]= cl.cons[con][time][i];
-        //if (isnan(cl.cons[con][time][i])){
-        //    toprint=true;
-        //}
     }
-    
-    
-    sort(tosort, tosort+sd.cells_total);
-    
-    /*
-    if (toprint){
-        for (int j=0; j< sd.cells_total; j++){
-            cout<< tosort[j]<< " ";
-        }
-        cout<<endl;
-    }
-    */
-    
+
+    sort(tosort, tosort+sd.cells_total);            // sort the array
+                                                    // NOTE: sorting is done differently with resgard to NaN in Linux and Mac
     int offset=0;
     if (con== 3 || con==2){
         offset=sd.cells_total/2;
-    }
+    }                                               // if we are dealing with mespa and mespb, skip first half since they are 0
     
-    int point_cal= 10;
+    int point_cal= 10;                              // take 10 for usual simulations; 5 for 1D simulations; 3 for mespa/mespb in 1D simulations
     if (sd.cells_total <=100){
         if (con == CMMESPA || con == CMMESPB){point_cal = 3;}
         else {point_cal =5;}
     }
     double max=0;
     double min=0;
-    for (int i=0; i< point_cal; i++){
+    for (int i=0; i< point_cal; i++){               //add min and max together
         min+= tosort[i+offset];
         max+= tosort[sd.cells_total-i-1];
     }
-    min/=point_cal;
+    min/=point_cal;                                 //divide to get average
     max/=point_cal;
-    //if (min<= 0.00001 || min >= 1000000){min= 0;}
     delete[] tosort;
     return max-min;
 }
@@ -786,6 +778,10 @@ double avg_amp (sim_data& sd, con_levels& cl, int con, int time, int start , int
 	return conslevel / (sd.height*(end-start));
 }
 
+
+/*
+ * calculate complementary scores for mespa and mespb in wildtype
+ */
 double mesp_sync (sim_data& sd, con_levels& cl, int con, int time) {  //151221: calculate complementary score of mespa and mespb
     if (sd.height == 1) {
         return 1; // for 1d arrays there is no synchronization between rows
@@ -835,6 +831,10 @@ double mesp_sync (sim_data& sd, con_levels& cl, int con, int time) {  //151221: 
     }
     return (pearson_sum / (sd.height ))/ (sd.height );
 }
+
+/*
+ * calculating syncronization scores for anterior part
+ */
 double ant_sync (sim_data& sd, con_levels& cl, int con, int time) {  //151221: calculate syncronization score
 	if (sd.height == 1) {
 		return 1; // for 1d arrays there is no synchronization between rows 
