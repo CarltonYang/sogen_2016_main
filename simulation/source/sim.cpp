@@ -57,9 +57,9 @@ void simulate_all_params (input_params& ip, rates& rs, sim_data& sd, double** se
     // Simulate every parameter set
     for (int i = 0; i < ip.num_sets; i++) {
         memcpy(rs.rates_base, sets[i], sizeof(double) * NUM_RATES); // Copy the set's rates to the current simulation's rates
-        //mds[MUTANT_HER1OVER].overexpression_factor=rs.rates_base[OEHER];
-        //mds[MUTANT_MESPAOVER].overexpression_factor=rs.rates_base[OEMESPA];
-        //mds[MUTANT_MESPBOVER].overexpression_factor=rs.rates_base[OEMESPB];
+        mds[MUTANT_HER1OVER].overexpression_factor=rs.rates_base[OEHER];
+        mds[MUTANT_MESPAOVER].overexpression_factor=rs.rates_base[OEMESPA];
+        mds[MUTANT_MESPBOVER].overexpression_factor=rs.rates_base[OEMESPB];
         score[i] = simulate_param_set(i, ip, sd, rs, cl, baby_cl, mds, file_passed, file_scores, dirnames_cons, file_features, file_conditions);
         sets_passed += determine_set_passed(sd, i, score[i]); // Calculate the maximum score and whether the set passed
     }

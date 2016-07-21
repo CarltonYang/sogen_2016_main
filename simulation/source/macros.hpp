@@ -131,10 +131,10 @@ macros.hpp contains every constant and macro function used in the program.
 // Network structure variable
 #define NS1				41
 #define NS2				42
-//#define OEHER           43
-//#define OEMESPA         44
-//#define OEMESPB         45
-#define NUM_RATES		43 // How big an array holding rates must be
+#define OEHER           43
+#define OEMESPA         44
+#define OEMESPB         45
+#define NUM_RATES		46 // How big an array holding rates must be
 #define MIN_DELAY		28 // The smallest index referring to a delay
 #define MAX_DELAY		35 // The largest index referring to a delay
 
