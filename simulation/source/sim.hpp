@@ -52,7 +52,7 @@ void con_protein_her(cp_args&, cph_indices);
 void con_protein_delta(cp_args&, cpd_indices);
 void dimer_proteins(sim_data&, array2D<double>&, con_levels&, st_context&);
 void con_dimer(cd_args&, int, int, cd_indices);
-void mRNA_synthesis(sim_data&, array2D<double>&, con_levels&, st_context&, int[], mutant_data&, bool, bool);
+void mRNA_synthesis(sim_data&, array2D<double>&, con_levels&, st_context&, int[], params&, bool, bool);
 void calc_neighbors_1d(sim_data&, int[], int, int, int);
 void calc_neighbors_2d(sim_data&);
 double transcription(array2D<double>&, con_levels&, int, int, double, double, double);

@@ -212,7 +212,13 @@ macros.hpp contains every constant and macro function used in the program.
 #define WRAP(x, y) ((x) + (y)) % (y)
 #define INT_STRLEN(x) (log10((x) > 0 ? (x) : 1) + 1)
 
-
+#define CUDA_ERRCHK(expr) { \
+  cudaError_t code = expr; \
+  if (code != cudaSuccess) { \
+    fprintf(stderr, "GPU error: %s %s %d", cudaGetErrorString(code), __FILE__, __LINE__);\
+    exit(code);\
+  }\
+}
 
 //define cut offs for satisfied conditions
 #define AMP_SAT  0.3

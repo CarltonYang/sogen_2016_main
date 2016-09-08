@@ -17,20 +17,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 _cuda_builder = Builder(
-    action = '/usr/local/cuda/bin/nvcc -c -ccbin=g++ $CXXFLAGS $SOURCES -o $TARGET',
+    action = '/usr/local/cuda/bin/nvcc -c -ccbin=g++ -arch=sm_35 $CPPFLAGS $SOURCES -o $TARGET',
     suffix = '.o',
     src_suffix = '.cu')
-compile_flags = '-O3 -I /usr/local/cuda/include'
+compile_flags = '-I /usr/local/cuda/include'
 link_flags = ''
 if ARGUMENTS.get('profiling', 0):
 	compile_flags += '-pg'
 	link_flags += '-pg'
 elif ARGUMENTS.get('debug', 0):
-	compile_flags += '-g'
+	compile_flags += ' -g'
+	link_flags += ' -g'
 elif ARGUMENTS.get('memtrack', 0):
 	compile_flags += '-D MEMTRACK'
 
 env = Environment(CXX='g++', BUILDERS={'NVCC' : _cuda_builder})
-env.Append(CXXFLAGS=compile_flags, LIBPATH='-L/usr/local/cuda/lib64', LIBS=['cudart', 'cuda'], LINKFLAGS=link_flags)
+env.Append(CPPFLAGS=compile_flags, LIBPATH='-L/usr/local/cuda/lib64', LIBS=['cudart_static', 'cuda', 'dl', 'pthread', 'rt'], LINKFLAGS=link_flags)
 env.NVCC('source/sim')
 env.Program(target='simulation', source=['source/main.cpp', 'source/init.cpp', 'source/sim.o', 'source/feats.cpp', 'source/tests.cpp', 'source/io.cpp', 'source/debug.cpp'])

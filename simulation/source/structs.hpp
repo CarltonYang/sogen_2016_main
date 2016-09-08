@@ -34,7 +34,7 @@ structs.hpp contains every struct used in the program.
 #include "concentration_level.hpp"
 #include "macros.hpp"
 #include "memory.hpp"
-
+#include "cuda.h"
 using namespace std;
 
 char* copy_str(const char*); // init.h cannot be included because it requires this file, structs.h, creating a cyclical dependency; therefore, copy_str, declared in init.h, must be declared in this file as well in order to use it here
@@ -314,8 +314,43 @@ struct con_levels {
 	int cells; // The number of cells this struct stores concentrations for
 	concentration_level<double> cons; // A three dimensional array that stores [concentration levels][time steps][cells] in that order
 	int* active_start_record; // Record of the start of the active PSM at each time step
+	int* _active_start_record; // Record of the start of the active PSM at each time step
 	int* active_end_record; // Record of the end of the active PSM at each time step
+	int* _active_end_record; // Record of the end of the active PSM at each time step
 	
+	
+	void toGPU(){
+		int size = time_steps*sizeof(int);
+		CUDA_ERRCHK(cudaMalloc((void**)&_active_start_record, size));
+		CUDA_ERRCHK(cudaMemcpy(_active_start_record,active_start_record,size,cudaMemcpyHostToDevice));
+		int* temp= active_start_record;
+		active_start_record=_active_start_record;
+		_active_start_record=temp;
+
+		CUDA_ERRCHK(cudaMalloc((void**)&_active_end_record, size));
+		CUDA_ERRCHK(cudaMemcpy(_active_end_record,active_end_record,size,cudaMemcpyHostToDevice));
+		temp= active_end_record;
+		active_end_record=_active_end_record;
+		_active_end_record=temp;
+		
+	}
+	
+
+	void toCPU(){
+
+		int* temp= active_start_record;
+		active_start_record=_active_start_record;
+		_active_start_record=temp;
+		cudaFree(_active_start_record);
+		
+		temp= active_end_record;
+		active_end_record=_active_end_record;
+		_active_end_record=temp;
+		cudaFree(_active_end_record);
+		
+		
+	}
+
 	con_levels () {
 		this->initialized = false;
 	}
@@ -372,10 +407,11 @@ struct con_levels {
 			this->initialized = false;
 		}
 	}
-	
+/*	
 	~con_levels () {
 		this->clear();
 	}
+ */
 };
 
 /* growin_array is an integer array that resizes when necessary by doubling its size until it can access the requested index
@@ -576,7 +612,7 @@ struct sim_data {
 	int cells_total; // The total number of cells of the PSM (total width * total height)
 	
 	// Neighbors and boundaries
-	int** neighbors; // An array of neighbor indices for each cell position used in 2D simulations (2-cell and 1D calculate these on the fly)
+	array2D<int> neighbors; // An array of neighbor indices for each cell position used in 2D simulations (2-cell and 1D calculate these on the fly)
 	int active_start; // The start of the active portion of the PSM
 	int active_end; // The end of the active portion of the PSM
 	
@@ -606,17 +642,19 @@ struct sim_data {
 		this->width_initial = ip.width_initial;
 		this->width_current = ip.width_initial;
 		this->height = ip.height;
-		this->cells_total = ip.width_total * ip.height;
-		this->neighbors = new int*[this->cells_total];
+		
+		//this->neighbors = new int*[this->cells_total];
 		int num_neighbors;
 		if (this->height == 1) {
 			num_neighbors = NEIGHBORS_1D;
 		} else {
 			num_neighbors = NEIGHBORS_2D;
 		}
-		for (int k = 0; k < this->cells_total; k++) {
-			this->neighbors[k] = new int[num_neighbors];
-		}
+		this->cells_total = ip.width_total * ip.height;
+		neighbors.initialize(cells_total,num_neighbors);
+		//for (int k = 0; k < this->cells_total; k++) {
+		//	this->neighbors[k] = new int[num_neighbors];
+		//}
 		this->section = 0;
 		this->time_start = 0;
 		this->time_end = 0;
@@ -643,11 +681,11 @@ struct sim_data {
 		this->active_end = (this->active_start - this->width_current + 1 + this->width_total) % this->width_total;
 	}
 	
+	
+
+
 	~sim_data () {
-		for (int k = 0; k < this->cells_total; k++) {
-			delete[] this->neighbors[k];
-		}
-		delete[] this->neighbors;
+		
 	}
 };
 
@@ -684,7 +722,7 @@ struct st_context {
 	int time_cur; // The current time step
 	int cell; // The current cell
 	
-	explicit st_context (int time_prev, int time_cur, int cell) {
+	CPUGPU_FUNC explicit st_context (int time_prev, int time_cur, int cell) {
 		this->time_prev = time_prev;
 		this->time_cur = time_cur;
 		this->cell = cell;
@@ -702,7 +740,7 @@ struct di_args {
 	st_context& stc; // Spatiotemporal context
 	double* dimer_effects; // An array of dimer effects to store in which to store the results of dim_int
 	
-	explicit di_args (array2D<double>& rs, con_levels& cl, st_context& stc, double dimer_effects[]) :
+	CPUGPU_FUNC explicit di_args (array2D<double>& rs, con_levels& cl, st_context& stc, double dimer_effects[]) :
 		rs(rs), cl(cl), stc(stc), dimer_effects(dimer_effects)
 	{}
 };
@@ -720,7 +758,7 @@ struct di_indices {
 	int rate_dissociation; // The index of the heterodimer's rate of dissociation
 	int dimer_effect; // The index in the dimer_effects array in the associated di_args struct
 	
-	explicit di_indices (int con_protein_self, int con_protein_other, int con_dimer, int rate_association, int rate_dissociation, int dimer_effect) :
+	CPUGPU_FUNC explicit di_indices (int con_protein_self, int con_protein_other, int con_dimer, int rate_association, int rate_dissociation, int dimer_effect) :
 		con_protein_self(con_protein_self), con_protein_other(con_protein_other), con_dimer(con_dimer), rate_association(rate_association), rate_dissociation(rate_dissociation), dimer_effect(dimer_effect)
 	{}
 };
@@ -738,7 +776,7 @@ struct cp_args {
 	int* old_cells; // An array of cell indices at the start of each protein's delay
 	double* dimer_effects; // An array of dimer effects calculated by dim_int
 	
-	explicit cp_args (sim_data& sd, array2D<double>& rs, con_levels& cl, st_context& stc, int old_cells[], double dimer_effects[]) :
+	CPUGPU_FUNC explicit cp_args (sim_data& sd, array2D<double>& rs, con_levels& cl, st_context& stc, int old_cells[], double dimer_effects[]) :
 		sd(sd), rs(rs), cl(cl), stc(stc), old_cells(old_cells), dimer_effects(dimer_effects)
 	{}
 };
@@ -760,7 +798,7 @@ struct cph_indices {
 	int dimer_effect; // The index in the dimer_effects array in the associated cp_args struct
 	int old_cell; // The index in the old_cells array in the associated cp_args struct
 	
-	explicit cph_indices (int con_mrna, int con_protein, int con_dimer, int rate_synthesis, int rate_degradation, int rate_association, int rate_dissociation, int delay_protein, int dimer_effect, int old_cell) :
+	CPUGPU_FUNC explicit cph_indices (int con_mrna, int con_protein, int con_dimer, int rate_synthesis, int rate_degradation, int rate_association, int rate_dissociation, int delay_protein, int dimer_effect, int old_cell) :
 		con_mrna(con_mrna), con_protein(con_protein), con_dimer(con_dimer), rate_synthesis(rate_synthesis), rate_degradation(rate_degradation), rate_association(rate_association), rate_dissociation(rate_dissociation), delay_protein(delay_protein), dimer_effect(dimer_effect), old_cell(old_cell)
 	{}
 };
@@ -778,7 +816,7 @@ struct cpd_indices {
 	int delay_protein; // The index of this protein's rate of delay
 	int old_cell; // The index in the old_cells array in the associated cp_args struct
 	
-	explicit cpd_indices (int con_mrna, int con_protein, int rate_synthesis, int rate_degradation, int delay_protein, int old_cell) :
+	CPUGPU_FUNC explicit cpd_indices (int con_mrna, int con_protein, int rate_synthesis, int rate_degradation, int delay_protein, int old_cell) :
 		con_mrna(con_mrna), con_protein(con_protein), rate_synthesis(rate_synthesis), rate_degradation(rate_degradation), delay_protein(delay_protein), old_cell(old_cell)
 	{}
 };
@@ -794,7 +832,7 @@ struct cd_args {
 	con_levels& cl; // Concentration levels
 	st_context& stc; // Spatiotemporal context
 	
-	explicit cd_args (sim_data& sd,array2D<double>& rs, con_levels& cl, st_context& stc) :
+	CPUGPU_FUNC explicit cd_args (sim_data& sd,array2D<double>& rs, con_levels& cl, st_context& stc) :
 		sd(sd), rs(rs), cl(cl), stc(stc)
 	{}
 };
@@ -810,10 +848,21 @@ struct cd_indices {
 	int rate_dissociation; // The index of this dimer's rate of dissociation
 	int rate_degradation; // The index of this dimer's rate of degradation
 	
-	explicit cd_indices (int con_protein, int rate_association, int rate_dissociation, int rate_degradation) :
+	CPUGPU_FUNC explicit cd_indices (int con_protein, int rate_association, int rate_dissociation, int rate_degradation) :
 		con_protein(con_protein), rate_association(rate_association), rate_dissociation(rate_dissociation), rate_degradation(rate_degradation)
 	{}
 };
 
+
+struct params{
+	
+	double overexpression_rate;  
+	double overexpression_factor;
+
+	params(mutant_data& md): 
+		overexpression_rate(md.overexpression_rate),overexpression_factor(md.overexpression_factor){}
+
+
+};
 #endif
 

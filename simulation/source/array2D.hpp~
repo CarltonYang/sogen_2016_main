@@ -25,18 +25,14 @@ public:
     
     class cell{
     public:
-        CPUGPU_FUNC cell(T *row, bool cuda): _array(row), _cuda(cuda) {}
+        CPUGPU_FUNC cell(T *row): _array(row) {}
         CPUGPU_FUNC T& operator[](int k){
-			if (_cuda){return _darray[k];}
-			else{return _array[k];}
+			return _array[k];
 		}
         CPUGPU_FUNC const T& operator[](int k) const {
-			if (_cuda){return _darray[k];}
-			else{return _array[k];}
+			return _array[k];
 		}
         T *_array;
-		T *_darray;
-		bool _cuda;
     };
 
 
@@ -45,7 +41,7 @@ public:
 		:_height(height),_width(width),_cuda(false){
         allocate_array();
     }
-    
+#if 0    
     array2D(const array2D<T>& other)
 		:_height(other._height),_width(other._width),_cuda(other._cuda){
         allocate_array();
@@ -57,6 +53,7 @@ public:
             
         }
     }
+#endif
     
 	void initialize(int height, int width){
         dealloc_array();
@@ -133,22 +130,22 @@ public:
         	return temp;
 		}		
 	}
-    
+ /*   
     ~array2D() {
         dealloc_array();
     }
-    
+ */   
     int height() const {return _height;}
     int width() const {return _width;}
     CPUGPU_FUNC bool getStatus() { return _cuda; }
 
 	void toGPU(){
-		if(!_cuda){
+		if(_cuda){
 			return;
 		}	
 		int size = _height*_width* sizeof(T);
-		cudaMalloc((void**)&_darray, size);
-		cudaMemcpy(_darray,_array,size,cudaMemcpyHostToDevice);
+		CUDA_ERRCHK(cudaMalloc((void**)&_darray, size));
+		CUDA_ERRCHK(cudaMemcpy(_darray,_array,size,cudaMemcpyHostToDevice));
 		_cuda=true;
 	}
 
@@ -157,7 +154,7 @@ public:
 			return;
 		}
 		int size = _height*_width* sizeof(T);
-		cudaMemcpy(_array, _darray, size, cudaMemcpyDeviceToHost);
+		CUDA_ERRCHK(cudaMemcpy(_array, _darray, size, cudaMemcpyDeviceToHost));
 		cudaFree(_darray);
 		_darray = NULL;
 		_cuda= false;

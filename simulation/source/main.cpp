@@ -96,6 +96,10 @@ int main(int argc, char** argv) {
 	return EXIT_SUCCESS;
 }
 
+
+
+
+
 /* usage prints the usage information and, optionally, an error message and then exits
 	parameters:
 		message: an error message to print before the usage information (set message to NULL or "\0" to not print any error)

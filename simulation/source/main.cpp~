@@ -1,6 +1,6 @@
 /*
-Deterministic simulator for zebrafish segmentation
-Copyright (C) 2012 Ahmet Ay, Jack Holland, Adriana Sperlea
+Simulation for zebrafish segmentation
+Copyright (C) 2013 Ahmet Ay, Jack Holland, Adriana Sperlea, Sebastian Sangervasi
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,183 +17,231 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 /*
-The program simulates the behavior of the zebrafish segmentation clock for two cells,
-through a matematical model using delay differential equations.
-To solve the equations, the program uses Euler's method, with an adjustable stepsize.
-The program tries to find parameter sets which replicate the behavior of the system in wild type
-and several mutants.
+main.cpp contains the main, usage, and licensing functions.
+Avoid putting functions in main.cpp that could be put in a more specific file.
 */
 
-#include <cstring>
-#include <cstdio>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <string>
+#include "main.hpp" // Function declarations
 
-#include "main.h"
-#include "macros.h"
-#include "structs.h"
-#include "init.h"
-#include "sim.h"
-#include "file-io.h"
+#include "init.hpp"
+#include "sim.hpp"
+#include "debug.hpp"
 
 using namespace std;
 
-extern terminal* term;
+extern terminal* term; // Declared in init.cpp
 
+/* main is called when the program is run and performs all program functionality
+	parameters:
+		argc: the number of command-line arguments
+		argv: the array of command-line arguments
+	returns: 0 on success, a positive integer on failure
+	notes:
+		Main should only delegate functionality; let the functions it calls handle specific tasks. This keeps the function looking clean and helps maintain the program structure.
+	todo:
+*/
 int main(int argc, char** argv) {
-	/// Check for user inputed arguments and initialize default values
-	
-	// Accept and initialize program parameters
+	// Initialize the program's terminal functionality and input parameters
 	input_params ip;
 	init_terminal();
-	accept_params(argc, argv, ip);
-	set_default_files(ip);
-	check_sim_size(ip);
-	init_seed(ip);
-
-	// Read the entire input file into a buffer to speed up I/O
-	input_file_data params_data(ip.input_file);
-	input_file_data pos_params_data(ip.pos_params_file);
-	read_sim_params(ip, params_data, pos_params_data);
-	check_num_params_valid(ip, params_data.buffer);
+	accept_input_params(argc, argv, ip);
+	init_verbosity(ip);
 	
-	// Create output files
+	// Read the specified input files
+	input_data params_data(ip.params_file);
+	input_data ranges_data(ip.ranges_file);
+	input_data perturb_data(ip.perturb_file);
+	input_data gradients_data(ip.gradients_file);
+	
+	// Ensure the program's input is semantically valid and translate it to the program's structures
+	check_input_params(ip);
+	double** sets = NULL;
+	read_sim_params(ip, params_data, sets, ranges_data);
+	read_perturb_params(ip, perturb_data);
+	read_gradients_params(ip, gradients_data);
+	
+	// Initialize simulation data, rates (and their perturbations and gradients), and mutant data
+	sim_data sd(ip);
+	rates* rs = new rates(sd.width_total, sd.cells_total);
+	fill_perturbations(*rs, perturb_data.buffer);
+	fill_gradients(*rs, gradients_data.buffer);
+	calc_max_delay_size(ip, sd, *rs, sets);
+	mutant_data* mds = create_mutant_data(sd, ip, *rs);
+	sd.initialize_conditions_data(mds);
+	
+	// Create the specified output files
 	ofstream* file_passed = create_passed_file(ip);
-	char** filenames_cons = create_cons_filenames(ip);
-	ofstream* file_features = create_features_file(ip);
-	
-	// Initialize simulation rates, rate positions, and mutant data
-	sim_data sd(ip.step_size, ip.minutes, ip.max_prop_thresh, ip.width_post, ip.width_thresh, ip.width_ant, ip.height);
-	rates* rs = new rates(sd.width_total);
-	rate_positions rps;
-	store_rate_positions(&rps, ip.pos_params, &pos_params_data);
-	mutant_data* mds = create_mutant_data();
+	ofstream* file_conditions = create_conditions_file(ip, mds);
+	char** filenames_dirs = create_dirs(ip, sd, mds);
+	ofstream* file_features = create_features_file(ip, mds);
+	ofstream* file_scores = create_scores_file(ip, mds);
 	
 	// Perform the actual simulations
-	simulate_all_params(ip, *rs, rps, sd, params_data, mds, file_passed, filenames_cons, file_features);
+	simulate_all_params(ip, *rs, sd, sets, mds, file_passed, file_scores, filenames_dirs, file_features, file_conditions);
 	
-	// Free up memory, close files, etc.
+	// Free used memory, close files, etc.
 	delete_mutant_data(mds);
 	delete rs;
-	delete_passed_file(file_passed);
-	delete_cons_filenames(filenames_cons);
-	delete_features_file(file_features);
+	delete_dirs(ip, filenames_dirs);
+	delete_file(file_features);
+	delete_file(file_conditions);
+	delete_file(file_passed);
+	delete_file(file_scores);
+	delete_sets(sets, ip);
+	#if defined(MEMTRACK)
+		print_heap_usage();
+	#endif
 	free_terminal();
-	return 0;
+	reset_cout(ip);
+	return EXIT_SUCCESS;
 }
 
-double interpolate (int x, int x0, int x1, double y0, double y1) {
-	return y0 + (y1 - y0) * ((x - x0) / (x1 - x0));
+
+/*
+example GPU kernel
+creating threads for GPU computing
+
+*/
+__global__ void exampleCUDA(concentration_level<double> cons, array2D<double> rates_active, md, sd){
+
+
 }
 
-void generate_set (double items[]) {
-	/*
-	 Generate a random set of parameters to be used with the simulation.
-	 The ranges for every parameter can be adjusted in their specific 2 element arrays.
-	*/
-	
-	// Ranges of mRNA synthesis rates
-	double msh[2] = {15, 65};
-	for (int i = 0; i <= 7; i++) {
-		items[i] = make_random(msh);
-	}
+/*
+StarkKernelexample sets up for GPU computation
+*/
 
-	// Ranges of mRNA degradation rates
-	double mdh[2] = {0.1, 0.4};
-	for (int i = 8; i <= 15; i++) {
-		items[i] = make_random(mdh);
-	}
+void startKernelexample(sim_data& sd, rates& rs,con_levels& baby_cl, mutant_data& md){
+
+	//Start timer
+	cudaEvent_t start,stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start, 0);
 	
-	// Ranges of protein synthesis rates
-	double psh[2] = {5, 60};
-	for (int i = 16; i <= 23; i++) {
-		items[i] = make_random(psh);
-	}
+	//create HOR array for each cell
+	//array2D<int> cHOR(cells,3);
+
+	//Copy arrays to GPU
+	baby_cl.cons.toGPU();
+	rs.rates_active.toGPU();
+	md.toGPU();
+	sd.toGPU();
 	
-	// Ranges of protein degradation rates
-	double pdh[2] = {0.1, 0.4};
-	for (int i = 24; i <= 31; i++) {
-		items[i] = make_random(pdh);
-	}
+	//int* cx = x[chunk_index]; // the current concentrations array in which to store data
 	
-	// Ranges of dimer degradation rates
-	double ddg[2] = {0.1, 0.4};
-	for (int i = 32; i <= 52; i++) {
-		items[i] = make_random(ddg);
-	}
+	//Set dimensions
+	dim3 dimBlock(1,1,1); //34 reactions by 14 species = 476 threads (add one gene gives you ~50 reactions and 20 species)
+	dim3 dimGrid(cells,1,1); //each cell in simulation gets own block
 	
-	// Ranges of mRNA transcription delays
-	double delaym[2] = {5, 12.0};
-	for (int i = 53; i <= 60; i++) {
-		items[i] = make_random(delaym);
-	}
-	items[57] = -1;
+	//Run kernel
+	//findtauCUDA<<<dimGrid,dimBlock>>>(st,critical,cx,cHOR,cells);
+	exampleCUDA(concentration_level<double> cons, array2D<double> rates_active, md, sd);
 	
-	// Ranges mRNA translation delays
-	double delayp[2] = {0.3, 2.0};
-	for (int i = 61; i <= 68; i++) {
-		items[i] = make_random(delayp);
-	}
+	//convert back to CPU
+	baby_cl.cons.toCPU();
+	rs.rates_active.toCPU();
+	md.toCPU();
+	sd.toCPU();
 	
-	// Ranges of dimer association rates
-	double da[2] = {0.0003, 0.03};
-	for (int i = 69; i <= 89; i++) {
-		items[i] = make_random(da);
-	}
+	//Stop timer
+	cudaDeviceSynchronize();
+	cudaEventRecord(stop, 0); 
+	cudaEventSynchronize(stop); 
+	float elapsedTime; 
+	cudaEventElapsedTime(&elapsedTime, start, stop); 
+	cudaEventDestroy(start);
+	cudaEventDestroy(stop);
+
 	
-	// ranges of dimer dissociation rates
-	double dd[2] = {0.0003, 0.03};
-	for (int i = 90; i <= 110; i++) {
-		items[i] = make_random(dd);
-	}
-	
-	// critical number of Her1-Her1, Her7-Her13 dimer proteins for inhibition of transcription
-	double critp[2] = {30, 1500};
-	for (int i = 111; i <= 119; i++) {
-		items[i] = make_random(critp);
-	}
+	//Print results
+	cout << "Elapsed time: " << elapsedTime << " milliseconds\n";
 }
 
-char* copy_str (const char* str) {
-	char* newstr = (char*)malloc(sizeof(char) * strlen(str) + 1);
-	return strcpy(newstr, str);
-}
 
+
+/* usage prints the usage information and, optionally, an error message and then exits
+	parameters:
+		message: an error message to print before the usage information (set message to NULL or "\0" to not print any error)
+	returns: nothing
+	notes:
+		This function exits after printing the usage information.
+		Note that accept_input_params in init.cpp handles actual command-line input and that this information should be updated according to that function.
+	todo:
+		TODO somehow free memory even with the abrupt exit
+*/
 void usage (const char* message) {
-	if (strcmp(message, "") != 0) { // if there is an error message to print then print it
+	cout << endl;
+	bool error = message != NULL && message[0] != '\0';
+	if (error) {
 		cout << term->red << message << term->reset << endl << endl;
 	}
 	cout << "Usage: [-option [value]]. . . [--option [value]]. . ." << endl;
-	cout << "-i, --input-file            : the input path and file to accept parameters from, default=input.txt" << endl;
-	cout << "-o, --output-file           : the path and file to print the output (i.e. parameters which passed conditions) to, default=passed.csv" << endl;
-	cout << "-t, --print-concentrations  : the path and file to print concentrations to, default=none" << endl;
-	cout << "-g, --print-granularity     : the granularity in timesteps with which to print, default=1" << endl;
-	cout << "-f, --print-osc-features    : the path and file to print oscillation features to, default=none" << endl;
-	cout << "-x, --posterior-width       : the tissue width (in cells), 2 for two-cell system, min=3 for chain, min=4 and even for tissue, default=3" << endl;
-	cout << "-w, --threshold-width       : width of the FGF threshold dividing the posterior from the anterior, min=1, default=4" << endl;
-	cout << "-n, --anterior-width        : the number of cells in the anterior to keep updating, min=0, default=20" << endl;
-	cout << "-y, --height                : the tissue height (in cells), 1 for two-cell system and chain, min=4 and even for tissue, default=1" << endl;
-	cout << "-S, --step-size             : the size of the timestep to be used for solving the DDEs using Euler's method" << endl;
-	cout << "-m, --minutes               : the maximum number of minutes to simulate before ending, min=1, default=1200" << endl;
-	cout << "-p, --parameters            : the number of parameters for which to simulate the model, min=1, default=1" << endl;
-	cout << "-P, --positional-parameters : the path and file containing the positional changes to parameter values, default=none" << endl;
-	cout << "-s, --seed                  : the seed to generate random numbers, min=1, default=time" << endl;
-	cout << "-a, --max-prop-threshold    : the threshold for the propensity functions which could be used in the stochastic simulation, min=1, default=none" << endl;
-	cout << "-c, --no-color              : disable coloring the terminal output, default=unused" << endl;
-	cout << "-q, --quiet                 : hide the terminal output, default=unused" << endl;
-	cout << "-l, --licensing             : view licensing information (no simulations will be run)" << endl;
-	cout << "-h, --help                  : view usage information (i.e. this)" << endl;
-	cout << endl << term->blue << "Example: ./deterministic -i parameters.csv --parameters 10 -m 2000 --no-color" << term->reset << endl << endl;
-	exit(0);
+	cout << "-i, --params-file        [filename]   : the relative filename of the parameter sets input file, default=none" << endl;
+	cout << "-R, --ranges-file        [filename]   : the relative filename of the parameter ranges input file, default=none" << endl;
+	cout << "-u, --perturb-file       [filename]   : the relative filename of the perturbations input file, default=none" << endl;
+	cout << "-r, --gradients-file     [filename]   : the relative filename of the gradients input file, default=none" << endl;
+	cout << "-o, --print-passed       [filename]   : the relative filename of the passed sets output file, default=none" << endl;
+	cout << "-t, --print-cons         [N/A]        : print concentration values to the specified output directory, default=unused" << endl;
+	cout << "-B, --binary-cons-output [N/A]        : print concentration values as binary numbers rather than ASCII, default=unused" << endl;
+	cout << "-f, --print-osc-features [filename]   : the relative filename of the file summarizing all the oscillation features, default=none" << endl;
+	cout << "-V, --her1-induction     [int]        : the induction point for her1 overexpression" << endl;
+	cout << "-Y, --her7-induction     [int]        : the induction point for her7 overexpression" << endl;
+	cout << "-Z, --DAPT-induction     [int]        : the induction point for DAPT treatment" << endl;
+	cout << "-Q, --mespa-induction     [int]        : the induction point for mespa overexpression" << endl;
+	cout << "-K, --mespb-induction     [int]        : the induction point for mespb overexpression" << endl;
+	cout << "-D, --directory-path     [directory]  : the relative directory where concentrations or anterior oscillation features files will be printed, default=none" << endl;
+	cout << "-A, --anterior-feats     [N/A]        : print in depth oscillation features for the anterior cells over time, default=unused" << endl;
+	cout << "-P, --posterior-feats    [N/A]        : print in depth oscillation features for the posterior cells over time, default=unused" << endl;
+	cout << "-W, --print-conditions   [filename]   : the relative filename of the passed and failed conditions file, default=none" << endl;
+	cout << "-E, --print-scores       [filename]   : the relative filename of the mutant scores file, default=none" << endl;
+	cout << "-L, --print-cells        [int]        : the number of columns of cells to print for plotting of single cells on top of each other, min=0, default=0" << endl;
+	cout << "-b, --big-granularity    [int]        : the granularity in time steps with which to store data, min=1, default=1" << endl;
+	cout << "-g, --small-granularity  [int]        : the granularity in time steps with which to simulate data, min=1, default=1" << endl;
+	cout << "-x, --total-width        [int]        : the tissue width in cells, min=3, default=3" << endl;
+	cout << "-w, --initial-width      [int]        : the tissue width in cells before anterior growth, min=3, max=total width, default=3" << endl;
+	cout << "-y, --height             [int]        : the tissue height in cells, min=1, default=1" << endl;
+	cout << "-S, --step-size          [float]      : the size of the timestep to be used for solving the DDEs using Euler's method, default=0.01" << endl;
+	cout << "-m, --total-time         [int]        : the number of minutes to simulate before ending, min=1, default=1200" << endl;
+	cout << "-T, --split-time         [int]        : the number of minutes it takes for cells to split, min=1, default=6, 0=never" << endl;
+	cout << "-G, --time-til-growth    [int]        : the number of minutes to wait before allowing cell growth, min=0, default=600" << endl;
+	cout << "-p, --parameter-sets     [int]        : the number of parameters for which to simulate the model, min=1, default=1" << endl;
+	cout << "-s, --seed               [int]        : the seed to generate random numbers, min=1, default=generated from the time and process ID" << endl;
+	cout << "-X, --reset-seed         [N/A]        : reset the seed after each parameter set so the initial seed is used each time, default=unused" << endl;
+	cout << "-d, --parameters-seed    [int]        : the seed to generate random parameter sets, min=1, default=generated from the time and process ID" << endl;
+	cout << "-e, --print-seeds        [filename]   : the relative filename of the seed output file, default=none" << endl;
+	cout << "-a, --max-con-threshold  [float]      : the concentration threshold at which to fail the simulation, min=1, default=infinity" << endl;
+	cout << "-C, --short-circuit      [N/A]        : stop simulating a parameter set after a mutant fails, default=unused" << endl;
+	cout << "-M, --mutants            [int]        : the number of mutants to run for each parameter set, min=1, max=" << NUM_MUTANTS << ", default=" << NUM_MUTANTS << endl;
+	cout << "-I, --pipe-in            [file desc.] : the file descriptor to pipe data from (usually passed by the sampler), default=none" << endl;
+	cout << "-O, --pipe-out           [file desc.] : the file descriptor to pipe data into (usually passed by the sampler), default=none" << endl;
+	cout << "-c, --no-color           [N/A]        : disable coloring the terminal output, default=unused" << endl;
+	cout << "-v, --verbose            [N/A]        : print detailed messages about the program and simulation state, default=unused" << endl;
+	cout << "-q, --quiet              [N/A]        : hide the terminal output, default=unused" << endl;
+	cout << "-l, --licensing          [N/A]        : view licensing information (no simulations will be run)" << endl;
+	cout << "-h, --help               [N/A]        : view usage information (i.e. this)" << endl;
+	cout << endl << term->blue << "Example: ./simulation -i parameters.csv --parameters 10 -m 2000 --no-color" << term->reset << endl << endl;
+	if (error) {
+		exit(EXIT_INPUT_ERROR);
+	} else {
+		exit(EXIT_SUCCESS);
+	}
 }
 
+/* licensing prints the program's copyright and licensing information and then exits
+	parameters:
+	returns: nothing
+	notes:
+	todo:
+*/
 void licensing () {
-	cout << "Stochastic simulator for zebrafish segmentation" << endl;
-	cout << "Copyright (C) 2012 Ahmet Ay (aay@colgate.edu), Jack Holland (jholland@colgate.edu), Adriana Sperlea (asperlea@colgate.edu)" << endl;
+	cout << endl;
+	cout << "Simulation for zebrafish segmentation" << endl;
+	cout << "Copyright (C) 2013 Ahmet Ay (aay@colgate.edu), Jack Holland (jholland@colgate.edu), Adriana Sperlea (asperlea@colgate.edu), Sebastian Sangervasi (ssangervasi@colgate.edu)" << endl;
 	cout << "This program comes with ABSOLUTELY NO WARRANTY" << endl;
 	cout << "This is free software, and you are welcome to redistribute it under certain conditions;" << endl;
-	cout << "You can use this code and modify it as you wish under the condition that you refer to the article: ???" << endl;
-	exit(0);
+	cout << "You can use this code and modify it as you wish under the condition that you refer to the article: \"Short-lived Her proteins drive robust synchronized oscillations in the zebrafish segmentation clock\" (Development 2013 140:3244-3253; doi:10.1242/dev.093278)" << endl;
+	cout << endl;
+	exit(EXIT_SUCCESS);
 }
+

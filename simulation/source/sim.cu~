@@ -22,7 +22,7 @@
 #include "feats.hpp"
 #include "init.hpp"
 #include "io.hpp"
-
+#include "structs.hpp"
 using namespace std;
 
 extern terminal* term; // Declared in init.cpp
@@ -413,6 +413,77 @@ double simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates& rs, 
 	notes:
 	todo:
  */
+
+__global__ void firstCUDA(sim_data sd, params p, array2D<double> rates_active, con_levels baby_cl, int baby_j, int j, int time_prev, bool past_induction,bool past_recovery){
+
+	unsigned int k = threadIdx.x;
+
+	if (sd.width_current == sd.width_total || k % sd.width_total <= sd.active_start) { // Compute only existing (i.e. already grown) cells
+    			// Calculate the cell indices at the start of each mRNA and protein's delay
+                int old_cells_mrna[NUM_INDICES];
+                int old_cells_protein[NUM_INDICES];
+                calculate_delay_indices(sd, baby_cl, baby_j, j, k, rates_active, old_cells_mrna, old_cells_protein);
+                
+                // Perform biological calculations
+                st_context stc(time_prev, baby_j, k);
+                protein_synthesis(sd, rates_active, baby_cl, stc, old_cells_protein);
+                dimer_proteins(sd,rates_active, baby_cl, stc);
+                mRNA_synthesis(sd, rates_active, baby_cl, stc, old_cells_mrna, p, past_induction, past_recovery);
+    }
+
+
+}
+
+void launchkernel(int cells_total,sim_data& sd, params &p,rates& rs, con_levels& baby_cl, int baby_j,int j,int time_prev,bool past_induction, bool past_recovery){
+	//Start timer
+	cudaEvent_t start,stop;
+	//cudaEventCreate(&start);
+	//cudaEventCreate(&stop);
+	//cudaEventRecord(start, 0);
+	
+	//create HOR array for each cell
+	//array2D<int> cHOR(cells,3);
+
+	//Copy arrays to GPU
+	baby_cl.cons.toGPU();
+	rs.rates_active.toGPU();
+	sd.neighbors.toGPU();
+	baby_cl.toGPU();
+	//int* cx = x[chunk_index]; // the current concentrations array in which to store data
+	
+	//Set dimensions
+	dim3 dimBlock(cells_total,1,1); //each cell had own thread
+	dim3 dimGrid(1,1,1); //simulation done on single block
+	cudaDeviceSetLimit(cudaLimitStackSize, 65536);
+	//Run kernel
+	//findtauCUDA<<<dimGrid,dimBlock>>>(st,critical,cx,cHOR,cells);
+	firstCUDA<<<dimGrid, dimBlock>>>(sd, p, rs.rates_active, baby_cl, baby_j, j, time_prev,past_induction, past_recovery);
+	CUDA_ERRCHK(cudaDeviceSynchronize());	
+	//convert back to CPU
+	if (cudaPeekAtLastError() != cudaSuccess) {
+        cout << "Kernel launch error: " << cudaPeekAtLastError() << "\n";
+    }
+	baby_cl.cons.toCPU();
+	rs.rates_active.toCPU();
+	sd.neighbors.toCPU();
+	baby_cl.toCPU();
+	//Stop timer
+	CUDA_ERRCHK(cudaDeviceSynchronize());
+
+	//cudaEventRecord(stop, 0); 
+	//cudaEventSynchronize(stop); 
+	//float elapsedTime; 
+	//cudaEventElapsedTime(&elapsedTime, start, stop); 
+	//cudaEventDestroy(start);
+	//cudaEventDestroy(stop);
+
+	
+	//Print results
+	//cout << "Elapsed time: " << elapsedTime << " milliseconds\n";
+
+}
+
+
 bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data& md, double temp_rates[2]) {
     int steps_elapsed = sd.steps_split; // Used to determine when to split a column of cells
     update_rates(rs, sd.active_start); // Update the active rates based on the base rates, perturbations, and gradients
@@ -443,6 +514,10 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
        
         
         // Iterate through each extant cell
+		//generate params struct with values
+		params p(md);
+		launchkernel(sd.cells_total,sd, p, rs, baby_cl, baby_j,j, time_prev, past_induction, past_recovery);
+		/*
         for (int k = 0; k < sd.cells_total; k++) {
             if (sd.width_current == sd.width_total || k % sd.width_total <= sd.active_start) { // Compute only existing (i.e. already grown) cells
                 // Calculate the cell indices at the start of each mRNA and protein's delay
@@ -457,6 +532,7 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
                 mRNA_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_mrna, md, past_induction, past_recovery);
             }
         }
+		*/
         /*
         avg_delta/= sd.cells_total;
         avg_rest/= sd.cells_total;
@@ -509,7 +585,7 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
 	notes:
 	todo:
  */
-void calculate_delay_indices (sim_data& sd, con_levels& cl, int baby_time, int time, int cell_index, array2D<double>& active_rates, int old_cells_mrna[], int old_cells_protein[]) {
+__device__ void calculate_delay_indices (sim_data& sd, con_levels& cl, int baby_time, int time, int cell_index, array2D<double>& active_rates, int old_cells_mrna[], int old_cells_protein[]) {
     if (sd.section == SEC_POST) { // Cells in posterior simulations do not split so the indices never change
         for (int l = 0; l < NUM_INDICES; l++) {
             old_cells_mrna[IMH1 + l] = cell_index;
@@ -535,7 +611,7 @@ void calculate_delay_indices (sim_data& sd, con_levels& cl, int baby_time, int t
 	notes:
 	todo:
  */
-inline int index_with_splits (sim_data& sd, con_levels& cl, int baby_time, int time, int cell_index, double delay) {
+__device__ inline int index_with_splits (sim_data& sd, con_levels& cl, int baby_time, int time, int cell_index, double delay) {
     int delay_steps = delay / sd.step_size;
     if (time - delay_steps < 0 || time - delay_steps >= cl.cons[BIRTH][baby_time][cell_index]) { // If the delay is longer than the simulation has run or shorter than the cell's age then return the cell's index
         return cell_index;
@@ -711,8 +787,8 @@ void update_rates (rates& rs, int active_start) {
  
 	151221: Added prtein synthesis for mespa and mespb
  */
-const cph_indices MESPB_INDICES(CMMESPB, CPMESPB, CPMESPBMESPB, RPSMESPB, RPDMESPB, RDAMESPBMESPB, RDDIMESPBMESPB, RDELAYPMESPB, IMESPB, IPMESPB);
-void protein_synthesis (sim_data& sd,array2D<double>& rs, con_levels& cl, st_context& stc, int old_cells_protein[]) {
+//const cph_indices MESPB_INDICES(CMMESPB, CPMESPB, CPMESPBMESPB, RPSMESPB, RPDMESPB, RDAMESPBMESPB, RDDIMESPBMESPB, RDELAYPMESPB, IMESPB, IPMESPB);
+__device__ void protein_synthesis (sim_data& sd,array2D<double>& rs, con_levels& cl, st_context& stc, int old_cells_protein[]) {
     double dimer_effects[NUM_HER_INDICES] = {0}; // Heterodimer calculations
     di_args dia(rs, cl, stc, dimer_effects); // WRAPper for repeatedly used structs
     cp_args cpa(sd, rs, cl, stc, old_cells_protein, dimer_effects); // WRAPper for repeatedly used indices
@@ -733,7 +809,7 @@ void protein_synthesis (sim_data& sd,array2D<double>& rs, con_levels& cl, st_con
         
         // MespB
         dim_int(dia, di_indices(CPMESPB, CPMESPA, CPMESPAMESPB, RDAMESPAMESPB, RDDIMESPAMESPB, IMESPB));
-        con_protein_her(cpa, MESPB_INDICES);
+        con_protein_her(cpa, cph_indices(CMMESPB, CPMESPB, CPMESPBMESPB, RPSMESPB, RPDMESPB, RDAMESPBMESPB, RDDIMESPBMESPB, RDELAYPMESPB, IMESPB, IPMESPB));
     }
     
     
@@ -749,8 +825,8 @@ void protein_synthesis (sim_data& sd,array2D<double>& rs, con_levels& cl, st_con
 	notes:
 	todo:
  */
-inline void dim_int (di_args& a, di_indices dii) {
-    array2D<double> r = a.rs;
+__device__ inline void dim_int (di_args& a, di_indices dii) {
+    array2D<double>& r = a.rs;
     concentration_level<double>& c = a.cl.cons;
     int tp = a.stc.time_prev;
     int cell = a.stc.cell;
@@ -770,7 +846,7 @@ inline void dim_int (di_args& a, di_indices dii) {
 	notes:
 	todo:
  */
-inline void con_protein_her (cp_args& a, cph_indices i) {
+__device__ inline void con_protein_her (cp_args& a, cph_indices i) {
     array2D<double>& r = a.rs;
     concentration_level<double>& c = a.cl.cons;
     int cell = a.stc.cell;
@@ -798,8 +874,8 @@ inline void con_protein_her (cp_args& a, cph_indices i) {
 	notes:
 	todo:
  */
-inline void con_protein_delta (cp_args& a, cpd_indices i) {
-    array2D<double> r = a.rs;
+__device__ inline void con_protein_delta (cp_args& a, cpd_indices i) {
+    array2D<double>& r = a.rs;
     concentration_level<double>& c = a.cl.cons;
     int cell = a.stc.cell;
     int delay_steps = r[i.delay_protein][cell] / a.sd.step_size;
@@ -826,7 +902,7 @@ inline void con_protein_delta (cp_args& a, cpd_indices i) {
  
 	151221: added dimerization for mespamespa, mespamespb, mespbmespb
  */
-void dimer_proteins (sim_data& sd, array2D<double>& rs, con_levels& cl, st_context& stc) {
+__device__ void dimer_proteins (sim_data& sd, array2D<double>& rs, con_levels& cl, st_context& stc) {
     cd_args cda(sd, rs, cl, stc); // WRAPper for repeatedly used structs
     
     
@@ -854,8 +930,8 @@ void dimer_proteins (sim_data& sd, array2D<double>& rs, con_levels& cl, st_conte
  
 	151221: pay attention to the index for mesp genes
  */
-inline void con_dimer (cd_args& a, int con, int offset, cd_indices i) {
-    array2D<double> r = a.rs;
+__device__ inline void con_dimer (cd_args& a, int con, int offset, cd_indices i) {
+    array2D<double>& r = a.rs;
     concentration_level<double>& c = a.cl.cons;
     int tc = a.stc.time_cur;
     int tp = a.stc.time_prev;
@@ -887,7 +963,7 @@ inline void con_dimer (cd_args& a, int con, int offset, cd_indices i) {
  
 	151221: Added mRNA transcription for meps genes, pay attention to index of mesp genes
  */
-void mRNA_synthesis (sim_data& sd, array2D<double>& rs, con_levels& cl, st_context& stc, int old_cells_mrna[], mutant_data& md, bool past_induction, bool past_recovery ) {
+__device__ void mRNA_synthesis (sim_data& sd, array2D<double>& rs, con_levels& cl, st_context& stc, int old_cells_mrna[], params& p, bool past_induction, bool past_recovery ) {
     // Translate delays from minutes to time steps
     int delays[NUM_INDICES];
     for (int j = 0; j < NUM_INDICES; j++) {
@@ -929,17 +1005,21 @@ void mRNA_synthesis (sim_data& sd, array2D<double>& rs, con_levels& cl, st_conte
         }
     } else { // For 2D simulations
         // Each cell has 6 neighbors so calculate where they and the active start and end were at the start of each mRNA concentration's delay
-        int neighbors[NUM_DD_INDICES][NEIGHBORS_2D];
-        for (int j = 0; j < NUM_DD_INDICES; j++) {
+        //int neighbors[NUM_DD_INDICES][NEIGHBORS_2D];
+        //for (int j = 0; j < NUM_DD_INDICES; j++) {
             // 2D neighbors are precalculated and simply copied from the structure as needed
-            int cell = old_cells_mrna[IMH1 + j];
-            memcpy(neighbors[IMH1 + j], sd.neighbors[cell], sizeof(int) * NEIGHBORS_2D);
-        }
+            //int cell = old_cells_mrna[IMH1 + j];
+            //memcpy(neighbors[IMH1 + j], sd.neighbors[cell], sizeof(int) * NEIGHBORS_2D);
+			
+        //}
         
         // For each mRNA concentration, average the given cell's neighbors' Delta protein concentrations
         for (int j = 0; j < NUM_DD_INDICES; j++) {
-            int* cells = neighbors[IMH1 + j];
+
+
             int cell = old_cells_mrna[IMH1 + j];
+			array2D<int>::cell cells = sd.neighbors[cell];
+            //int* cells = neighbors[IMH1 + j];
             int time = WRAP(stc.time_cur - delays[j], sd.max_delay_size);
             concentration_level<double>::cell cur_cons = cl.cons[CPDELTA][time];
             double sum=0;
@@ -977,12 +1057,12 @@ void mRNA_synthesis (sim_data& sd, array2D<double>& rs, con_levels& cl, st_conte
          }
          */
         
-        if (j==md.overexpression_rate){
+        if (j==p.overexpression_rate){
             //cout<< md.overexpression_rate<<endl;
             if (past_induction) {
                 //cout<<"PAST"<<endl;
                 if (!past_recovery) {
-                    oe = md.overexpression_factor;
+                    oe = p.overexpression_factor;
                     //cout<< oe<<endl;
                 }
             }
@@ -1022,7 +1102,7 @@ void mRNA_synthesis (sim_data& sd, array2D<double>& rs, con_levels& cl, st_conte
 	todo:
  TODO clean up these parameters
  */
-inline double transcription (array2D<double>& rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe) {
+__device__ inline double transcription (array2D<double>& rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe) {
     double th1h1= 0, tdelta;
     th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : avgpd / rs[RCRITPDELTA][cell];
@@ -1043,7 +1123,7 @@ inline double transcription (array2D<double>& rs, con_levels& cl, int time, int 
 	todo:
  TODO clean up these parameters
  */
-inline double transcription_mespa (array2D<double>& rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe, int section) {
+__device__ inline double transcription_mespa (array2D<double>& rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe, int section) {
     double th1h1,  tmespbmespb = 0, tdelta;
     th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     tmespbmespb = rs[RCRITPMESPBMESPB][cell] == 0 ? 0 : cl.cons[CPMESPBMESPB][time][cell] / (rs[RCRITPMESPBMESPB][cell]);
@@ -1066,7 +1146,7 @@ inline double transcription_mespa (array2D<double>& rs, con_levels& cl, int time
 	todo:
  TODO clean up these parameters
  */
-inline double transcription_mespb (array2D<double>& rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe) {
+__device__ inline double transcription_mespb (array2D<double>& rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe) {
     double tmespamespa = 0, tmespamespb = 0, tmespbmespb = 0, tdelta;
     //th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     //th7h13 = rs[RCRITPH7H13][cell] == 0 ? 0 : cl.cons[CPH7H13][time][cell] / rs[RCRITPH7H13][cell];
@@ -1096,7 +1176,7 @@ inline double transcription_mespb (array2D<double>& rs, con_levels& cl, int time
 	notes:
 	todo:
  */
-void calc_neighbors_1d (sim_data& sd, int neighbors[], int cell, int active_start, int active_end) {
+__device__ void calc_neighbors_1d (sim_data& sd, int neighbors[], int cell, int active_start, int active_end) {
     if (cell == active_start) {
         neighbors[0] = cell - 1;
         neighbors[1] = cell - 1;
