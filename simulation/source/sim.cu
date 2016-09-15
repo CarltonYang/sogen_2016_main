@@ -445,10 +445,10 @@ void launchkernel(int cells_total,sim_data& sd, params &p,rates& rs, con_levels&
 	//array2D<int> cHOR(cells,3);
 
 	//Copy arrays to GPU
-	baby_cl.cons.toGPU();
-	rs.rates_active.toGPU();
-	sd.neighbors.toGPU();
-	baby_cl.toGPU();
+	//baby_cl.cons.toGPU();
+	//rs.rates_active.toGPU();
+	//sd.neighbors.toGPU();
+	//baby_cl.toGPU();
 	//int* cx = x[chunk_index]; // the current concentrations array in which to store data
 	
 	//Set dimensions
@@ -463,10 +463,11 @@ void launchkernel(int cells_total,sim_data& sd, params &p,rates& rs, con_levels&
 	if (cudaPeekAtLastError() != cudaSuccess) {
         cout << "Kernel launch error: " << cudaPeekAtLastError() << "\n";
     }
-	baby_cl.cons.toCPU();
-	rs.rates_active.toCPU();
-	sd.neighbors.toCPU();
-	baby_cl.toCPU();
+
+	//baby_cl.cons.toCPU();
+	//rs.rates_active.toCPU();
+	//sd.neighbors.toCPU();
+	//baby_cl.toCPU();
 	//Stop timer
 	CUDA_ERRCHK(cudaDeviceSynchronize());
 
@@ -493,10 +494,20 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
     int baby_j; // Cyclical time used by baby_cl
     bool past_induction = false; // Whether we've passed the point of induction of knockouts or overexpression
     bool past_recovery = false; // Whether we've recovered from the knockouts or overexpression
+
+
+	//Copy arrays to GPU
+	baby_cl.cons.toGPU();
+	rs.rates_active.toGPU();
+	sd.neighbors.toGPU();
+	baby_cl.toGPU();
+
     for (j = sd.time_start, baby_j = 0; j < sd.time_end; j++, baby_j = WRAP(baby_j + 1, sd.max_delay_size)) {
         if (j % 100 == 0) {
 		    cout << "iter " << j << '\n';
         }
+
+		//happeing once each simulation?ss
         if (!past_induction && !past_recovery && (j  > anterior_time(sd,md.induction))) {
             //cout<<anterior_time(sd,md.induction)<<endl;
             knockout(rs, md, 1); //knock down rates after the induction point
@@ -519,30 +530,7 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
 		//generate params struct with values
 		params p(md);
 		launchkernel(sd.cells_total,sd, p, rs, baby_cl, baby_j,j, time_prev, past_induction, past_recovery);
-		/*
-        for (int k = 0; k < sd.cells_total; k++) {
-            if (sd.width_current == sd.width_total || k % sd.width_total <= sd.active_start) { // Compute only existing (i.e. already grown) cells
-                // Calculate the cell indices at the start of each mRNA and protein's delay
-                int old_cells_mrna[NUM_INDICES];
-                int old_cells_protein[NUM_INDICES];
-                calculate_delay_indices(sd, baby_cl, baby_j, j, k, rs.rates_active, old_cells_mrna, old_cells_protein);
-                
-                // Perform biological calculations
-                st_context stc(time_prev, baby_j, k);
-                protein_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_protein);
-                dimer_proteins(sd, rs.rates_active, baby_cl, stc);
-                mRNA_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_mrna, md, past_induction, past_recovery);
-            }
-        }
-		*/
-        /*
-        avg_delta/= sd.cells_total;
-        avg_rest/= sd.cells_total;
-        if (sd.section== SEC_ANT && (md.index== MUTANT_HER1OVER || md.index== MUTANT_MESPAOVER || md.index== MUTANT_MESPBOVER)&& j==62000){
-            cout<<"oe "<<md.index<<" " <<md.overexpression_rate<<" "<<md.overexpression_factor<<endl;}
-        if (sd.section== SEC_ANT && (md.index== MUTANT_WILDTYPE || md.index== MUTANT_DELTA)&& j==60000){
-            cout<<"avg delta "<< avg_delta<<"; avg rest"<<avg_rest<<endl;}
-         */
+		
         // Check to make sure the numbers are still valid
         if (any_less_than_0(baby_cl, baby_j) || concentrations_too_high(baby_cl, baby_j, sd.max_con_thresh)) {
             return false;
@@ -557,6 +545,7 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
         
         // Update the active record data and split counter
         steps_elapsed++;
+		//// Record of the start of the active PSM at each time step
         baby_cl.active_start_record[baby_j] = sd.active_start;
         baby_cl.active_end_record[baby_j] = sd.active_end;
         
@@ -567,6 +556,11 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
 
     }
     
+	baby_cl.cons.toCPU();
+	rs.rates_active.toCPU();
+	sd.neighbors.toCPU();
+	baby_cl.toCPU();
+
     // Copy the last time step from the simulating cl to the analysis cl and mark where the simulating cl left off time-wise
     baby_to_cl(baby_cl, cl, WRAP(baby_j - 1, sd.max_delay_size), (j - 1) / sd.big_gran);
     sd.time_baby = baby_j;
