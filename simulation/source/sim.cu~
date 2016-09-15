@@ -417,6 +417,10 @@ double simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates& rs, 
 __global__ void firstCUDA(sim_data sd, params p, array2D<double> rates_active, con_levels baby_cl, int baby_j, int j, int time_prev, bool past_induction,bool past_recovery){
 
 	unsigned int k = threadIdx.x;
+	
+    baby_cl.cons[BIRTH][baby_j][k] = baby_cl.cons[BIRTH][time_prev][k];
+    baby_cl.cons[PARENT][baby_j][k] = baby_cl.cons[PARENT][time_prev][k];
+    
 
 	if (sd.width_current == sd.width_total || k % sd.width_total <= sd.active_start) { // Compute only existing (i.e. already grown) cells
     			// Calculate the cell indices at the start of each mRNA and protein's delay
@@ -430,6 +434,7 @@ __global__ void firstCUDA(sim_data sd, params p, array2D<double> rates_active, c
                 dimer_proteins(sd,rates_active, baby_cl, stc);
                 mRNA_synthesis(sd, rates_active, baby_cl, stc, old_cells_mrna, p, past_induction, past_recovery);
     }
+	
 
 
 }
@@ -458,6 +463,7 @@ void launchkernel(int cells_total,sim_data& sd, params &p,rates& rs, con_levels&
 	//Run kernel
 	//findtauCUDA<<<dimGrid,dimBlock>>>(st,critical,cx,cHOR,cells);
 	firstCUDA<<<dimGrid, dimBlock>>>(sd, p, rs.rates_active, baby_cl, baby_j, j, time_prev,past_induction, past_recovery);
+
 	CUDA_ERRCHK(cudaDeviceSynchronize());	
 	//convert back to CPU
 	if (cudaPeekAtLastError() != cudaSuccess) {
@@ -507,13 +513,15 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
 		    cout << "iter " << j << '\n';
         }
 
-		//happeing once each simulation?ss
+		// only updates base_rates and cell_rates, which are not directly involved in simulation
+		//happeing once each simulation
         if (!past_induction && !past_recovery && (j  > anterior_time(sd,md.induction))) {
             //cout<<anterior_time(sd,md.induction)<<endl;
             knockout(rs, md, 1); //knock down rates after the induction point
             perturb_rates_all(rs); //This is used for knockout the rate in the existing cells, may need modification
             past_induction = true;
         }
+		
         //if (past_induction && (j + sd.steps_til_growth > md.recovery +sd.max_delay_size)) {
         if (past_induction && (j > anterior_time(sd,md.recovery))) {
             revert_knockout(rs, md, temp_rates);
@@ -523,7 +531,8 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
         
         
         int time_prev = WRAP(baby_j - 1, sd.max_delay_size); // Time is cyclical, so time_prev may not be baby_j - 1
-        copy_records(sd, baby_cl, baby_j, time_prev); // Copy each cell's birth and parent so the records are accessible at every time step
+		// try to put this part into GPU calculation
+        //copy_records(sd, baby_cl, baby_j, time_prev); // Copy each cell's birth and parent so the records are accessible at every time step
        
         
         // Iterate through each extant cell
@@ -531,26 +540,33 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
 		params p(md);
 		launchkernel(sd.cells_total,sd, p, rs, baby_cl, baby_j,j, time_prev, past_induction, past_recovery);
 		
+		// try to put this part into GPU calculation
         // Check to make sure the numbers are still valid
-        if (any_less_than_0(baby_cl, baby_j) || concentrations_too_high(baby_cl, baby_j, sd.max_con_thresh)) {
-            return false;
-        }
+        //if (any_less_than_0(baby_cl, baby_j) || concentrations_too_high(baby_cl, baby_j, sd.max_con_thresh)) {
+        //    return false;
+        //}
         
         // Split cells periodically in anterior simulations
         if (sd.section == SEC_ANT && (steps_elapsed % sd.steps_split) == 0) {
+			baby_cl.cons.toCPU;
             split(sd, rs, baby_cl, baby_j, j);
             update_rates(rs, sd.active_start);
             steps_elapsed = 0;
+			rs.rates_active.toGPU();
+			baby_cl.cons.toGPU();
         }
         
+		// all operations can be executed on CPU, data already on CPU
         // Update the active record data and split counter
         steps_elapsed++;
 		//// Record of the start of the active PSM at each time step
         baby_cl.active_start_record[baby_j] = sd.active_start;
         baby_cl.active_end_record[baby_j] = sd.active_end;
         
+		// unilateral copy from baby_cl to cl, which means only form GPU to CPU
         // Copy from the simulating cl to the analysis cl
         if (j % sd.big_gran == 0) {
+			baby_cl.toCPU();
             baby_to_cl(baby_cl, cl, baby_j, j / sd.big_gran);
         }
 
