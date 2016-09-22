@@ -37,14 +37,6 @@ structs.hpp contains every struct used in the program.
 #include "cuda.h"
 using namespace std;
 
-#define CUDA_ERRCHK(expr) { \
-  cudaError_t code = expr; \
-  if (code != cudaSuccess) { \
-    fprintf(stderr, "GPU error: %s %s %d", cudaGetErrorString(code), __FILE__, __LINE__);\
-    exit(code);\
-  }\
-}
-
 char* copy_str(const char*); // init.h cannot be included because it requires this file, structs.h, creating a cyclical dependency; therefore, copy_str, declared in init.h, must be declared in this file as well in order to use it here
 
 /* terminal contains colors, streams, and common messages for terminal output
@@ -327,35 +319,40 @@ struct con_levels {
 	int* _active_end_record; // Record of the end of the active PSM at each time step
 	
 	
-	void toGPU(){
+	void allocateGPU(){
 		int size = time_steps*sizeof(int);
 		CUDA_ERRCHK(cudaMalloc((void**)&_active_start_record, size));
 		CUDA_ERRCHK(cudaMemcpy(_active_start_record,active_start_record,size,cudaMemcpyHostToDevice));
+		CUDA_ERRCHK(cudaMalloc((void**)&_active_end_record, size));
+		CUDA_ERRCHK(cudaMemcpy(_active_end_record,active_end_record,size,cudaMemcpyHostToDevice));
+	}
+
+	void swapToGPU(){
+		
 		int* temp= active_start_record;
 		active_start_record=_active_start_record;
 		_active_start_record=temp;
 
-		CUDA_ERRCHK(cudaMalloc((void**)&_active_end_record, size));
-		CUDA_ERRCHK(cudaMemcpy(_active_end_record,active_end_record,size,cudaMemcpyHostToDevice));
 		temp= active_end_record;
 		active_end_record=_active_end_record;
 		_active_end_record=temp;
 		
 	}
 	
+	void deallocateGPU(){
+		cudaFree(_active_start_record);
+		cudaFree(_active_end_record);
+	}
 
-	void toCPU(){
+	void swapToCPU(){
 
 		int* temp= active_start_record;
 		active_start_record=_active_start_record;
 		_active_start_record=temp;
-		cudaFree(_active_start_record);
 		
 		temp= active_end_record;
 		active_end_record=_active_end_record;
 		_active_end_record=temp;
-		cudaFree(_active_end_record);
-		
 		
 	}
 

@@ -25,48 +25,30 @@ public:
     
     class cell{
     public:
-        CPUGPU_FUNC cell(T *row, bool cuda): _array(row), _cuda(cuda) {}
+        CPUGPU_FUNC cell(T *row): _array(row) {}
         CPUGPU_FUNC T& operator[](int k){
-			if (_cuda){return _darray[k];}
-			else{return _array[k];}
+			return _array[k];
 		}
         CPUGPU_FUNC const T& operator[](int k) const {
-			if (_cuda){return _darray[k];}
-			else{return _array[k];}
+			return _array[k];
 		}
         T *_array;
-		T *_darray;
-		bool _cuda;
     };
 
 
     class timespan{
     public:
-        CPUGPU_FUNC timespan(T *plane,int width, bool cuda): _array(plane), _width(width), _cuda(cuda){};
+        CPUGPU_FUNC timespan(T *plane,int width): _array(plane), _width(width) {};
         CPUGPU_FUNC cell operator[](int j) {
-            if (_cuda){
-				cell temp(_darray+_width*j, _cuda);
-       			return temp;
-			}		
-			else{
-				cell temp(_array+_width*j, _cuda);
-        		return temp;
-			}
+            cell temp(_array+_width*j);
+        	return temp;
         }
 
         CPUGPU_FUNC const cell operator[](int j) const{
-            if (_cuda){
-				cell temp(_darray+_width*j, _cuda);
-       			return temp;
-			}		
-			else{
-				cell temp(_array+_width*j, _cuda);
-        		return temp;
-			}
+            cell temp(_array+_width*j);
+        	return temp;
         }
         T *_array;
-		T *_darray;
-		bool _cuda;
         int _width;
     };
     concentration_level(int height =0, int length =0, int width =0)
@@ -129,22 +111,22 @@ public:
     */
 	CPUGPU_FUNC timespan operator[](int i){
 		if (_cuda){
-			timespan temp(_darray+_length*_width*i, _width, _cuda);
+			timespan temp(_darray+_length*_width*i, _width);
        		return temp;
 		}		
 		else{
-			timespan temp(_array+_length*_width*i, _width, _cuda);
+			timespan temp(_array+_length*_width*i, _width);
         	return temp;
 		}		
 	}
 	
     CPUGPU_FUNC const timespan operator[](int i) const{
 		if (_cuda){
-			timespan temp(_darray+_length*_width*i, _width, _cuda);
+			timespan temp(_darray+_length*_width*i, _width);
        		return temp;
 		}		
 		else{
-			timespan temp(_array+_length*_width*i, _width, _cuda);
+			timespan temp(_array+_length*_width*i, _width);
         	return temp;
 		}		
 	}
@@ -158,26 +140,42 @@ public:
     int width() const {return _width;}
     CPUGPU_FUNC bool getStatus() { return _cuda; }
 
-	void toGPU(){
+	void allocateGPU(){
+		if(_cuda){
+			return;
+		}
+		int size = _height*_length*_width* sizeof(T);
+		CUDA_ERRCHK(cudaMalloc((void**)&_darray, size));
+	}
+	
+	void swapToGPU(){
 		if(_cuda){
 			return;
 		}	
 		//std::cout << "Copying to GPU\n";
 		int size = _height*_length*_width* sizeof(T);
-		CUDA_ERRCHK(cudaMalloc((void**)&_darray, size));
+		//CUDA_ERRCHK(cudaMalloc((void**)&_darray, size));
 		CUDA_ERRCHK(cudaMemcpy(_darray,_array,size,cudaMemcpyHostToDevice));
 		_cuda=true;
 	}
 
-	void toCPU(){
+	void deallocateGPU(){
+		if(!_cuda){
+			return;
+		}
+		//std::cout << "Copying to CPU\n";
+		CUDA_ERRCHK(cudaFree(_darray));
+		_darray = NULL;
+	}
+	void swapToCPU(){
 		if(!_cuda){
 			return;
 		}
 		//std::cout << "Copying to CPU\n";
 		int size = _height*_length*_width* sizeof(T);
 		CUDA_ERRCHK(cudaMemcpy(_array, _darray, size, cudaMemcpyDeviceToHost));
-		CUDA_ERRCHK(cudaFree(_darray));
-		_darray = NULL;
+		//CUDA_ERRCHK(cudaFree(_darray));
+		//_darray = NULL;
 		_cuda= false;
 	}
 protected:

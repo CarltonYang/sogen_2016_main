@@ -139,24 +139,39 @@ public:
     int width() const {return _width;}
     CPUGPU_FUNC bool getStatus() { return _cuda; }
 
-	void toGPU(){
+	void allocateGPU(){
 		if(_cuda){
 			return;
 		}	
 		int size = _height*_width* sizeof(T);
 		CUDA_ERRCHK(cudaMalloc((void**)&_darray, size));
+	}
+
+	void swapToGPU(){
+		if(_cuda){
+			return;
+		}	
+		int size = _height*_width* sizeof(T);
+		//CUDA_ERRCHK(cudaMalloc((void**)&_darray, size));
 		CUDA_ERRCHK(cudaMemcpy(_darray,_array,size,cudaMemcpyHostToDevice));
 		_cuda=true;
 	}
-
-	void toCPU(){
+	
+	void deallocateGPU(){
+		if(!_cuda){
+			return;
+		}
+		cudaFree(_darray);
+		_darray = NULL;
+	}
+	void swapToCPU(){
 		if(!_cuda){
 			return;
 		}
 		int size = _height*_width* sizeof(T);
 		CUDA_ERRCHK(cudaMemcpy(_array, _darray, size, cudaMemcpyDeviceToHost));
-		cudaFree(_darray);
-		_darray = NULL;
+		//cudaFree(_darray);
+		//_darray = NULL;
 		_cuda= false;
 	}
 protected:

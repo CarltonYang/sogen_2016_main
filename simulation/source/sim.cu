@@ -174,6 +174,7 @@ int simulate_section (int set_num, input_params& ip, sim_data& sd, rates& rs, co
         mutant_sim_message(mds[i], i);
         store_original_rates(rs, mds[i], temp_rates); // will be used to revert original rates after current mutant
         knockout (rs, mds[i], 0);
+		//cout<<"in simulate_section"<<endl;
         double current_score = simulate_mutant(set_num, ip, sd, rs, cl, baby_cl, mds[i], mds[MUTANT_WILDTYPE].feat, dirnames_cons[i], temp_rates);
         scores[sd.section * ip.num_active_mutants + i] = current_score;
         baby_cl.reset();
@@ -320,7 +321,7 @@ double simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates& rs, 
     reset_seed(ip, sd); // Reset the seed for each mutant
     baby_cl.reset(); // Reset the concentrations levels used for simulating
     perturb_rates_all(rs); // Perturb the rates of all starting cells
-    
+    //cout<<"in simulate_mutant"<<endl;
     // Initialize active record data and neighbor calculations
     sd.initialize_active_data();
     if (sd.height > 1) {
@@ -500,19 +501,24 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
     int baby_j; // Cyclical time used by baby_cl
     bool past_induction = false; // Whether we've passed the point of induction of knockouts or overexpression
     bool past_recovery = false; // Whether we've recovered from the knockouts or overexpression
-
+	
 
 	//Copy arrays to GPU
-	baby_cl.cons.toGPU();
-	rs.rates_active.toGPU();
-	sd.neighbors.toGPU();
-	baby_cl.toGPU();
+	baby_cl.cons.allocateGPU();
+	rs.rates_active.allocateGPU();
+	sd.neighbors.allocateGPU();
+	baby_cl.allocateGPU();
 
+	baby_cl.cons.swapToGPU();
+	rs.rates_active.swapToGPU();
+	sd.neighbors.swapToGPU();
+	baby_cl.swapToGPU();
+	
     for (j = sd.time_start, baby_j = 0; j < sd.time_end; j++, baby_j = WRAP(baby_j + 1, sd.max_delay_size)) {
-        if (j % 100 == 0) {
-		    cout << "iter " << j << '\n';
-        }
-
+        //if (j % 100 == 0) {
+		//    cout << "iter " << j << '\n';
+        //}
+		
 		// only updates base_rates and cell_rates, which are not directly involved in simulation
 		//happeing once each simulation
         if (!past_induction && !past_recovery && (j  > anterior_time(sd,md.induction))) {
@@ -545,38 +551,52 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
         //if (any_less_than_0(baby_cl, baby_j) || concentrations_too_high(baby_cl, baby_j, sd.max_con_thresh)) {
         //    return false;
         //}
-        
+       
         // Split cells periodically in anterior simulations
         if (sd.section == SEC_ANT && (steps_elapsed % sd.steps_split) == 0) {
-			baby_cl.cons.toCPU;
+			baby_cl.cons.swapToCPU();
             split(sd, rs, baby_cl, baby_j, j);
             update_rates(rs, sd.active_start);
             steps_elapsed = 0;
-			rs.rates_active.toGPU();
-			baby_cl.cons.toGPU();
+			rs.rates_active.swapToGPU();
+			baby_cl.cons.swapToGPU();
         }
         
 		// all operations can be executed on CPU, data already on CPU
         // Update the active record data and split counter
         steps_elapsed++;
-		//// Record of the start of the active PSM at each time step
+		
+		// Record of the start of the active PSM at each time step
+		baby_cl.swapToCPU();
         baby_cl.active_start_record[baby_j] = sd.active_start;
+		
         baby_cl.active_end_record[baby_j] = sd.active_end;
         
+		baby_cl.swapToGPU();
 		// unilateral copy from baby_cl to cl, which means only form GPU to CPU
         // Copy from the simulating cl to the analysis cl
-        if (j % sd.big_gran == 0) {
-			baby_cl.toCPU();
+        if (j % (sd.big_gran*100)  == 0) {
+			
+			baby_cl.cons.swapToCPU();
+			baby_cl.swapToCPU();
+			
             baby_to_cl(baby_cl, cl, baby_j, j / sd.big_gran);
+			baby_cl.cons.swapToGPU();
+			baby_cl.swapToGPU();
         }
-
+		
     }
     
-	baby_cl.cons.toCPU();
-	rs.rates_active.toCPU();
-	sd.neighbors.toCPU();
-	baby_cl.toCPU();
-
+	baby_cl.cons.swapToCPU();
+	rs.rates_active.swapToCPU();
+	sd.neighbors.swapToCPU();
+	baby_cl.swapToCPU();
+	
+	baby_cl.cons.deallocateGPU();
+	rs.rates_active.deallocateGPU();
+	sd.neighbors.deallocateGPU();
+	baby_cl.deallocateGPU();
+	
     // Copy the last time step from the simulating cl to the analysis cl and mark where the simulating cl left off time-wise
     baby_to_cl(baby_cl, cl, WRAP(baby_j - 1, sd.max_delay_size), (j - 1) / sd.big_gran);
     sd.time_baby = baby_j;

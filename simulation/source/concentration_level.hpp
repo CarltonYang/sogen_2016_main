@@ -140,26 +140,42 @@ public:
     int width() const {return _width;}
     CPUGPU_FUNC bool getStatus() { return _cuda; }
 
-	void toGPU(){
+	void allocateGPU(){
+		if(_cuda){
+			return;
+		}
+		int size = _height*_length*_width* sizeof(T);
+		CUDA_ERRCHK(cudaMalloc((void**)&_darray, size));
+	}
+	
+	void swapToGPU(){
 		if(_cuda){
 			return;
 		}	
 		//std::cout << "Copying to GPU\n";
 		int size = _height*_length*_width* sizeof(T);
-		CUDA_ERRCHK(cudaMalloc((void**)&_darray, size));
+		//CUDA_ERRCHK(cudaMalloc((void**)&_darray, size));
 		CUDA_ERRCHK(cudaMemcpy(_darray,_array,size,cudaMemcpyHostToDevice));
 		_cuda=true;
 	}
 
-	void toCPU(){
+	void deallocateGPU(){
+		if(!_cuda){
+			return;
+		}
+		//std::cout << "Copying to CPU\n";
+		CUDA_ERRCHK(cudaFree(_darray));
+		_darray = NULL;
+	}
+	void swapToCPU(){
 		if(!_cuda){
 			return;
 		}
 		//std::cout << "Copying to CPU\n";
 		int size = _height*_length*_width* sizeof(T);
 		CUDA_ERRCHK(cudaMemcpy(_array, _darray, size, cudaMemcpyDeviceToHost));
-		CUDA_ERRCHK(cudaFree(_darray));
-		_darray = NULL;
+		//CUDA_ERRCHK(cudaFree(_darray));
+		//_darray = NULL;
 		_cuda= false;
 	}
 protected:

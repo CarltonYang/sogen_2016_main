@@ -319,35 +319,40 @@ struct con_levels {
 	int* _active_end_record; // Record of the end of the active PSM at each time step
 	
 	
-	void toGPU(){
+	void allocateGPU(){
 		int size = time_steps*sizeof(int);
 		CUDA_ERRCHK(cudaMalloc((void**)&_active_start_record, size));
 		CUDA_ERRCHK(cudaMemcpy(_active_start_record,active_start_record,size,cudaMemcpyHostToDevice));
+		CUDA_ERRCHK(cudaMalloc((void**)&_active_end_record, size));
+		CUDA_ERRCHK(cudaMemcpy(_active_end_record,active_end_record,size,cudaMemcpyHostToDevice));
+	}
+
+	void swapToGPU(){
+		
 		int* temp= active_start_record;
 		active_start_record=_active_start_record;
 		_active_start_record=temp;
 
-		CUDA_ERRCHK(cudaMalloc((void**)&_active_end_record, size));
-		CUDA_ERRCHK(cudaMemcpy(_active_end_record,active_end_record,size,cudaMemcpyHostToDevice));
 		temp= active_end_record;
 		active_end_record=_active_end_record;
 		_active_end_record=temp;
 		
 	}
 	
+	void deallocateGPU(){
+		cudaFree(_active_start_record);
+		cudaFree(_active_end_record);
+	}
 
-	void toCPU(){
+	void swapToCPU(){
 
 		int* temp= active_start_record;
 		active_start_record=_active_start_record;
 		_active_start_record=temp;
-		cudaFree(_active_start_record);
 		
 		temp= active_end_record;
 		active_end_record=_active_end_record;
 		_active_end_record=temp;
-		cudaFree(_active_end_record);
-		
 		
 	}
 
