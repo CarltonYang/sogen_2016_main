@@ -174,6 +174,15 @@ public:
 		//_darray = NULL;
 		_cuda= false;
 	}
+
+	void swapPointerToGPU(){
+		_cuda=true;
+	}
+
+	void swapPointerToCPU(){
+		_cuda=false;
+	}
+
 protected:
     void dealloc_array(){
         if (_array){

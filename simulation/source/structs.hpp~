@@ -322,21 +322,20 @@ struct con_levels {
 	void allocateGPU(){
 		int size = time_steps*sizeof(int);
 		CUDA_ERRCHK(cudaMalloc((void**)&_active_start_record, size));
-		CUDA_ERRCHK(cudaMemcpy(_active_start_record,active_start_record,size,cudaMemcpyHostToDevice));
 		CUDA_ERRCHK(cudaMalloc((void**)&_active_end_record, size));
-		CUDA_ERRCHK(cudaMemcpy(_active_end_record,active_end_record,size,cudaMemcpyHostToDevice));
+		
 	}
 
 	void swapToGPU(){
-		
+		int size = time_steps*sizeof(int);
+		CUDA_ERRCHK(cudaMemcpy(_active_start_record,active_start_record,size,cudaMemcpyHostToDevice));
 		int* temp= active_start_record;
 		active_start_record=_active_start_record;
 		_active_start_record=temp;
-
+		CUDA_ERRCHK(cudaMemcpy(_active_end_record,active_end_record,size,cudaMemcpyHostToDevice));
 		temp= active_end_record;
 		active_end_record=_active_end_record;
 		_active_end_record=temp;
-		
 	}
 	
 	void deallocateGPU(){
@@ -345,15 +344,38 @@ struct con_levels {
 	}
 
 	void swapToCPU(){
-
+		int size = time_steps*sizeof(int);
+		 cout<<"st1"<<endl;
+		CUDA_ERRCHK(cudaMemcpy(active_start_record,_active_start_record,size,cudaMemcpyDeviceToHost));
 		int* temp= active_start_record;
+		cout<<"st2"<<endl;
 		active_start_record=_active_start_record;
 		_active_start_record=temp;
-		
+		cout<<"st3"<<endl;
+		CUDA_ERRCHK(cudaMemcpy(active_end_record,_active_end_record,size,cudaMemcpyDeviceToHost));
 		temp= active_end_record;
+		cout<<"st4"<<endl;
 		active_end_record=_active_end_record;
 		_active_end_record=temp;
 		
+	}
+
+	void swapPointerToGPU(){
+		int* temp= active_start_record;
+		active_start_record=_active_start_record;
+		_active_start_record=temp;
+		temp= active_end_record;
+		active_end_record=_active_end_record;
+		_active_end_record=temp;
+	}
+
+	void swapPointerToCPU(){
+		int* temp= active_start_record;
+		active_start_record=_active_start_record;
+		_active_start_record=temp;
+		temp= active_end_record;
+		active_end_record=_active_end_record;
+		_active_end_record=temp;
 	}
 
 	con_levels () {

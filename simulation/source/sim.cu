@@ -515,9 +515,9 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
 	baby_cl.swapToGPU();
 	
     for (j = sd.time_start, baby_j = 0; j < sd.time_end; j++, baby_j = WRAP(baby_j + 1, sd.max_delay_size)) {
-        //if (j % 100 == 0) {
-		//    cout << "iter " << j << '\n';
-        //}
+        if (j % 100 == 0) {
+		    cout << "iter " << j << '\n';
+        }
 		
 		// only updates base_rates and cell_rates, which are not directly involved in simulation
 		//happeing once each simulation
@@ -555,6 +555,7 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
         // Split cells periodically in anterior simulations
         if (sd.section == SEC_ANT && (steps_elapsed % sd.steps_split) == 0) {
 			baby_cl.cons.swapToCPU();
+			rs.rates_active.swapPointerToCPU();
             split(sd, rs, baby_cl, baby_j, j);
             update_rates(rs, sd.active_start);
             steps_elapsed = 0;
@@ -565,41 +566,60 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
 		// all operations can be executed on CPU, data already on CPU
         // Update the active record data and split counter
         steps_elapsed++;
-		
+		//cout<<"model1"<<endl;
 		// Record of the start of the active PSM at each time step
-		baby_cl.swapToCPU();
+		baby_cl.swapPointerToCPU();
         baby_cl.active_start_record[baby_j] = sd.active_start;
-		
         baby_cl.active_end_record[baby_j] = sd.active_end;
-        
 		baby_cl.swapToGPU();
 		// unilateral copy from baby_cl to cl, which means only form GPU to CPU
         // Copy from the simulating cl to the analysis cl
-        if (j % (sd.big_gran*100)  == 0) {
-			
+		//cout<<"model2"<<endl;
+        if (baby_j % (sd.max_delay_size)  == 0) {
+			//cout<<"model1"<<endl;
 			baby_cl.cons.swapToCPU();
-			baby_cl.swapToCPU();
-			
-            baby_to_cl(baby_cl, cl, baby_j, j / sd.big_gran);
-			baby_cl.cons.swapToGPU();
-			baby_cl.swapToGPU();
+			baby_cl.swapPointerToCPU();
+			for (int l =0, m=j-sd.max_delay_size; l<sd.max_delay_size;l++,m++ ){
+           		baby_to_cl(baby_cl, cl, l, m / sd.big_gran);
+			}
+			//cout<<"model2"<<endl;
+			baby_cl.cons.swapPointerToGPU();
+			baby_cl.swapPointerToGPU();
+        }
+		if (j==sd.time_end-2) {
+			//cout<<"model1"<<endl;
+			baby_cl.cons.swapToCPU();
+			baby_cl.swapPointerToCPU();
+			for (int l =0, m=j-baby_j; l<baby_j;l++,m++ ){
+           		baby_to_cl(baby_cl, cl, l, m / sd.big_gran);
+			}
+			//cout<<"model2"<<endl;
+			baby_cl.cons.swapPointerToGPU();
+			baby_cl.swapPointerToGPU();
         }
 		
     }
-    
+    cout<<"model1"<<endl;
 	baby_cl.cons.swapToCPU();
+	cout<<"model5"<<endl;
 	rs.rates_active.swapToCPU();
+cout<<"model6"<<endl;
 	sd.neighbors.swapToCPU();
+cout<<"model7"<<endl;
+	baby_cl.swapPointerToGPU();
 	baby_cl.swapToCPU();
-	
+	cout<<"model2"<<endl;
 	baby_cl.cons.deallocateGPU();
 	rs.rates_active.deallocateGPU();
 	sd.neighbors.deallocateGPU();
 	baby_cl.deallocateGPU();
-	
+	baby_cl.swapPointerToCPU();
+	cout<<"model3"<<endl;
     // Copy the last time step from the simulating cl to the analysis cl and mark where the simulating cl left off time-wise
     baby_to_cl(baby_cl, cl, WRAP(baby_j - 1, sd.max_delay_size), (j - 1) / sd.big_gran);
+	cout<<"model4"<<endl;
     sd.time_baby = baby_j;
+	cout<<"model5"<<endl;
     return true;
 }
 

@@ -164,7 +164,7 @@ public:
 		cudaFree(_darray);
 		_darray = NULL;
 	}
-	void toCPU(){
+	void swapToCPU(){
 		if(!_cuda){
 			return;
 		}
@@ -173,6 +173,14 @@ public:
 		//cudaFree(_darray);
 		//_darray = NULL;
 		_cuda= false;
+	}
+
+	void swapPointerToGPU(){
+		_cuda=true;
+	}
+
+	void swapPointerToCPU(){
+		_cuda=false;
 	}
 protected:
     void dealloc_array(){
