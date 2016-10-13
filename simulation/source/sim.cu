@@ -606,14 +606,15 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
 cout<<"model6"<<endl;
 	sd.neighbors.swapToCPU();
 cout<<"model7"<<endl;
-	baby_cl.swapPointerToGPU();
+	//baby_cl.swapPointerToGPU();
+
 	baby_cl.swapToCPU();
 	cout<<"model2"<<endl;
 	baby_cl.cons.deallocateGPU();
 	rs.rates_active.deallocateGPU();
 	sd.neighbors.deallocateGPU();
 	baby_cl.deallocateGPU();
-	baby_cl.swapPointerToCPU();
+	//baby_cl.swapPointerToCPU();
 	cout<<"model3"<<endl;
     // Copy the last time step from the simulating cl to the analysis cl and mark where the simulating cl left off time-wise
     baby_to_cl(baby_cl, cl, WRAP(baby_j - 1, sd.max_delay_size), (j - 1) / sd.big_gran);

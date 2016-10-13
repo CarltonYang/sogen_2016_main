@@ -182,6 +182,7 @@ public:
 	void swapPointerToCPU(){
 		_cuda=false;
 	}
+
 protected:
     void dealloc_array(){
         if (_array){
