@@ -63,6 +63,7 @@ int main(int argc, char** argv) {
 	// Initialize simulation data, rates (and their perturbations and gradients), and mutant data
 	sim_data sd(ip);
 	rates* rs = new rates(sd.width_total, sd.cells_total);
+    
 	fill_perturbations(*rs, perturb_data.buffer);
 	fill_gradients(*rs, gradients_data.buffer);
 	calc_max_delay_size(ip, sd, *rs, sets);

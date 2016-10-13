@@ -51,16 +51,19 @@ void simulate_all_params (input_params& ip, rates& rs, sim_data& sd, double** se
     
     // Initialize the concentration levels structs
     int max_cl_size = MAX(sd.steps_til_growth, sd.max_delay_size + sd.steps_total - sd.steps_til_growth) / sd.big_gran + 1;
-    con_levels cl(NUM_CON_STORE, max_cl_size, sd.cells_total, sd.active_start); // Concentration levels for analysis and storage
-    con_levels baby_cl(NUM_CON_LEVELS, sd.max_delay_size, sd.cells_total, sd.active_start); // Concentration levels for simulating (time in this cl is treated cyclically)
+
+	con_levels[ip.num_active_mutants] cls;
+	con_levels[ip.num_active_mutants] baby_cls;
+	for (int i = 0; i < ip.num_active_mutants; i++) {
+    	cls[i]= con_levels(NUM_CON_STORE, max_cl_size, sd.cells_total, sd.active_start); // Concentration levels for analysis and storage
+		baby_cls[i]= con_levels(NUM_CON_LEVELS, sd.max_delay_size, sd.cells_total, sd.active_start); // Concentration levels for simulating (time in this cl is treated cyclically)	
+	}
+    
     
     // Simulate every parameter set
     for (int i = 0; i < ip.num_sets; i++) {
         memcpy(rs.rates_base, sets[i], sizeof(double) * NUM_RATES); // Copy the set's rates to the current simulation's rates
-        //mds[MUTANT_HER1OVER].overexpression_factor=rs.rates_base[OEHER];
-        //mds[MUTANT_MESPAOVER].overexpression_factor=rs.rates_base[OEMESPA];
-        //mds[MUTANT_MESPBOVER].overexpression_factor=rs.rates_base[OEMESPB];
-        score[i] = simulate_param_set(i, ip, sd, rs, cl, baby_cl, mds, file_passed, file_scores, dirnames_cons, file_features, file_conditions);
+        score[i] = simulate_param_set(i, ip, sd, rs, cls, baby_cls, mds, file_passed, file_scores, dirnames_cons, file_features, file_conditions);
         sets_passed += determine_set_passed(sd, i, score[i]); // Calculate the maximum score and whether the set passed
     }
     
@@ -111,7 +114,7 @@ bool determine_set_passed (sim_data& sd, int set_num, double score) {
 	notes:
 	todo:
  */
-double simulate_param_set (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data mds[], ofstream* file_passed, ofstream* file_scores, char** dirnames_cons, ofstream* file_features, ofstream* file_conditions) {
+double simulate_param_set (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels cls[], con_levels baby_cls[], mutant_data mds[], ofstream* file_passed, ofstream* file_scores, char** dirnames_cons, ofstream* file_features, ofstream* file_conditions) {
     // Prepare for the simulations
     cout << term->blue << "Simulating set " << term->reset << set_num << " . . ." << endl;
     int num_passed = 0;
@@ -119,14 +122,16 @@ double simulate_param_set (int set_num, input_params& ip, sim_data& sd, rates& r
     if (!ip.reset_seed) { // Reset the seed for each set if specified by the user
         init_seeds(ip, set_num, set_num > 0, true);
     }
-    cl.reset(); // Reset the concentration levels for each set
+    for (int i = 0; i < ip.num_active_mutants; i++) {
+    	cls[i].reset(); // Reset the concentration levels for each set
+	}
     (*mds).feat.reset();
     
     // Simulate every mutant in the posterior before moving on to the anterior
     int end_section = SEC_ANT * !(sd.no_growth);
     for (int i = SEC_POST; i <= end_section; i++) {
         sd.section = i;
-        num_passed += simulate_section(set_num, ip, sd, rs, cl, baby_cl, mds, dirnames_cons, scores);
+        num_passed += simulate_section(set_num, ip, sd, rs, cls, baby_cls, mds, dirnames_cons, scores);
     }
     
     // Calculate the total score
@@ -162,23 +167,28 @@ double simulate_param_set (int set_num, input_params& ip, sim_data& sd, rates& r
 	notes:
 	todo:
  */
-int simulate_section (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data mds[], char** dirnames_cons, double scores[]) {
+int simulate_section (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels cls[], con_levels baby_cls[], mutant_data mds[], char** dirnames_cons, double scores[]) {
     // Prepare for this section's simulations
     int num_passed = 0;
-    double temp_rates[2]; // Array of knockout rates so knockouts can be quickly applied and reverted
+	//changed array to a 2d array to store all the data
+    double temp_rates[ip.num_active_mutant][2]; // Array of knockout rates so knockouts can be quickly applied and reverted
     determine_start_end(sd);
     reset_mutant_scores(ip, mds);
     
     // Simulate each mutant
     for (int i = 0; i < ip.num_active_mutants; i++) {
         mutant_sim_message(mds[i], i);
-        store_original_rates(rs, mds[i], temp_rates); // will be used to revert original rates after current mutant
+        store_original_rates(rs, mds[i], temp_rates[i]); // will be used to revert original rates after current mutant
         knockout (rs, mds[i], 0);
+	}
 		//cout<<"in simulate_section"<<endl;
-        double current_score = simulate_mutant(set_num, ip, sd, rs, cl, baby_cl, mds[i], mds[MUTANT_WILDTYPE].feat, dirnames_cons[i], temp_rates);
-        scores[sd.section * ip.num_active_mutants + i] = current_score;
-        baby_cl.reset();
-        revert_knockout(rs, mds[i], temp_rates); // this should still happen at the end
+        double[ip.num_active_mutants] current_score = simulate_mutant(set_num, ip, sd, rs, cls, baby_cls, mds, mds[MUTANT_WILDTYPE].feat, dirnames_cons, temp_rates);
+
+
+	 for (int i = 0; i < ip.num_active_mutants; i++) {
+        scores[sd.section * ip.num_active_mutants + i] = current_score[i];
+        baby_cls[i].reset();
+        revert_knockout(rs, mds[i], temp_rates[i]); // this should still happen at the end
         
         if (current_score == mds[i].max_cond_scores[sd.section]) { // If the mutant passed, increment the passed counter
             ++num_passed;
@@ -317,90 +327,84 @@ inline void revert_knockout (rates& rs, mutant_data& md, double orig_rates[]) {
 	todo:
  TODO Break up this enormous function.
  */
-double simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data& md, features& wtfeat, char* dirname_cons, double temp_rates[2]) {
-    reset_seed(ip, sd); // Reset the seed for each mutant
-    baby_cl.reset(); // Reset the concentrations levels used for simulating
-    perturb_rates_all(rs); // Perturb the rates of all starting cells
-    //cout<<"in simulate_mutant"<<endl;
-    // Initialize active record data and neighbor calculations
-    sd.initialize_active_data();
-    if (sd.height > 1) {
-        calc_neighbors_2d(sd);
-    }
-    cl.active_start_record[0] = sd.active_start;
-    baby_cl.active_start_record[0] = sd.active_start;
-    
-    // Copy the posterior results if this is an anterior simulation
-    if (sd.section == SEC_ANT) {
-        copy_mutant_to_cl(sd, baby_cl, md);
-    }
-    
+double* simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels cls[], con_levels baby_cls[], mutant_data mds[], features& wtfeat, char** dirname_cons, double* temp_rates[2]) {
+
+	//initiate the return array
+	double[ip.num_active_mutants] score_array=0;
+
+	for (int i = 0; i < ip.num_active_mutants; i++) {
+    	reset_seed(ip, sd); // Reset the seed for each mutant
+    	baby_cls[i].reset(); // Reset the concentrations levels used for simulating
+    	perturb_rates_all(rs); // Perturb the rates of all starting cells
+	    //cout<<"in simulate_mutant"<<endl;
+	    // Initialize active record data and neighbor calculations
+	    sd.initialize_active_data();
+	    if (sd.height > 1) {
+	        calc_neighbors_2d(sd);
+	    }
+	    cls[i].active_start_record[0] = sd.active_start;
+	    baby_cls[i].active_start_record[0] = sd.active_start;
+	    
+	    // Copy the posterior results if this is an anterior simulation
+	    if (sd.section == SEC_ANT) {
+	        copy_mutant_to_cl(sd, baby_cls[i], mds[i]);
+	    }
+	}    
     // Simulate the mutant
-    bool passed = model(sd, rs, cl, baby_cl, md, temp_rates);
+    bool passed = model(sd, rs, cls, baby_cls, mds, temp_rates);
     
+
+	for (int i = 0; i < ip.num_active_mutants; i++) {
     // Analyze the simulation's oscillation features
-    term->verbose() << term->blue << "    Analyzing " << term->reset << "oscillation features . . . ";
-    double score = 0;
-    if (sd.section == SEC_POST) { // Posterior analysis
-        osc_features_post(sd, ip, cl, md.feat, wtfeat, md, dirname_cons, sd.time_start / sd.big_gran, sd.time_end / sd.big_gran, set_num);
-        term->verbose() << term->blue << "Done" << endl;
-    } else { // Anterior analysis
-        if (ip.ant_features) {
-            term->verbose() << endl;
-        }
-        osc_features_ant(sd, ip, wtfeat, dirname_cons, cl, md, 0, sd.height, 0, 5, set_num);
-        if (ip.ant_features) {
-            term->verbose() << term->blue << "    Done " << term->reset << "analyzing oscillation features" << endl;
-        } else {
-            term->verbose() << term->blue << "Done" << endl;
-        }
-    }
+    	term->verbose() << term->blue << "    Analyzing " << term->reset << "oscillation features . . . ";
+    	double score = 0;
+    	if (sd.section == SEC_POST) { // Posterior analysis
+        	osc_features_post(sd, ip, cls[i], mds[i].feat, wtfeat, mds[i], dirname_cons[i], sd.time_start / sd.big_gran, sd.time_end / sd.big_gran, set_num);
+        	term->verbose() << term->blue << "Done" << endl;
+    	} else { // Anterior analysis
+        	if (ip.ant_features) {
+        	    term->verbose() << endl;
+        	}
+        	osc_features_ant(sd, ip, wtfeat, dirname_cons[i], cls[i], mds[i], 0, sd.height, 0, 5, set_num);
+        	if (ip.ant_features) {
+        	    term->verbose() << term->blue << "    Done " << term->reset << "analyzing oscillation features" << endl;
+        	} else {
+        	    term->verbose() << term->blue << "Done" << endl;
+        	}
+    	}
     
-    // Copy and print the appropriate data
-    print_concentrations(ip, sd, cl, md, dirname_cons, set_num);
-    if (sd.section == SEC_ANT) { // Print concentrations of columns of cells from posterior to anterior to a file if the user specified it
-        print_cell_columns(ip, sd, cl, dirname_cons, set_num);
-    }
-    if (!sd.no_growth && sd.section == SEC_POST && !ip.short_circuit) { // Copy the concentration levels to the mutant data (if not short circuiting)
-        copy_cl_to_mutant(sd, baby_cl, md);
-    }
-    
-    // Print how the mutant performed and finish book-keeping
-    term->verbose() << "  " << term->blue << "Done: " << term->reset << md.print_name << " scored ";
-    if (passed) {
-        md.secs_passed[sd.section] = true; // Mark that this mutant has passed this simulation
-        score += md.tests[sd.section](md, wtfeat);
-        double max_score = md.max_cond_scores[sd.section];
-        /*
-         if (sd.section == SEC_ANT && (md.index == MUTANT_WILDTYPE)) { // The max score has to be adjusted for mutants which have a wave section
-         //max_score += md.max_cond_scores[SEC_WAVE];
-         int time_full = anterior_time(sd, sd.steps_til_growth + (sd.width_total - sd.width_initial - 1) * sd.steps_split);
-         int wave_score=0;
-         for (int time = time_full; time < sd.time_end; time += (sd.time_end - 1 - time_full) / 4) {
-         if (md.index == MUTANT_WILDTYPE){
-         //wave_score = wave_testing(sd, cl, md, time, CMH1, sd.active_start);
-         } else {
-         //wave_score = wave_testing_her1(sd, cl, md, time, sd.active_start);  // unused 151221
-         }
-         }
-         score += wave_score;
-         }
-         */
-        if (score == max_score) {
-            // Copy the concentration levels to the mutant data if this is a posterior simulation (if short circuiting)
-            if (!sd.no_growth && sd.section == SEC_POST && ip.short_circuit) {
-                copy_cl_to_mutant(sd, baby_cl, md);
-            }
-            term->verbose() << term->blue;
-        } else {
-            term->verbose() << term->red;
-        }
-        term->verbose() << score << " / " << max_score;
-    } else {
-        term->verbose() << term->red << "failed to complete the simulation";
-    }
-    term->verbose() << term->reset << endl;
-    return score;
+   	 // Copy and print the appropriate data
+    	print_concentrations(ip, sd, cls[i], mds[i], dirname_cons[i], set_num);
+    	if (sd.section == SEC_ANT) { // Print concentrations of columns of cells from posterior to anterior to a file if the user specified it
+    	    print_cell_columns(ip, sd, cls[i], dirname_cons[i], set_num);
+    	}
+    	if (!sd.no_growth && sd.section == SEC_POST && !ip.short_circuit) { // Copy the concentration levels to the mutant data (if not 	short circuiting)
+    	    copy_cl_to_mutant(sd, baby_cls[i], mds[i]);
+    	}
+    	
+    	// Print how the mutant performed and finish book-keeping
+    	term->verbose() << "  " << term->blue << "Done: " << term->reset << md.print_name << " scored ";
+    	if (passed) {
+    	    mds[i].secs_passed[sd.section] = true; // Mark that this mutant has passed this simulation
+    	    score += mds[i].tests[sd.section](mds[i], wtfeat);
+    	    double max_score = mds[i].max_cond_scores[sd.section];
+    	    if (score == max_score) {
+    	        // Copy the concentration levels to the mutant data if this is a posterior simulation (if short circuiting)
+    	        if (!sd.no_growth && sd.section == SEC_POST && ip.short_circuit) {
+    	            copy_cl_to_mutant(sd, baby_cls[i], mds[i]);
+    	        }
+    	        term->verbose() << term->blue;
+    	    } else {
+    	        term->verbose() << term->red;
+    	    }
+    	    term->verbose() << score << " / " << max_score;
+    	} else {
+    	    term->verbose() << term->red << "failed to complete the simulation";
+    	}
+    	term->verbose() << term->reset << endl;
+		score_array[i]= score;
+	}
+    return score_array;
 }
 
 /* model performs the biological functions of a simulation
@@ -418,22 +422,22 @@ double simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates& rs, 
 __global__ void firstCUDA(sim_data sd, params p, array2D<double> rates_active, con_levels baby_cl, int baby_j, int j, int time_prev, bool past_induction,bool past_recovery){
 
 	unsigned int k = threadIdx.x;
-	
-    baby_cl.cons[BIRTH][baby_j][k] = baby_cl.cons[BIRTH][time_prev][k];
-    baby_cl.cons[PARENT][baby_j][k] = baby_cl.cons[PARENT][time_prev][k];
+	unsigned int i = blockIdx y;
+    baby_cls[i].cons[BIRTH][baby_j][k] = baby_cls[i].cons[BIRTH][time_prev][k];
+    baby_cls[i].cons[PARENT][baby_j][k] = baby_cls[i].cons[PARENT][time_prev][k];
     
 
 	if (sd.width_current == sd.width_total || k % sd.width_total <= sd.active_start) { // Compute only existing (i.e. already grown) cells
     			// Calculate the cell indices at the start of each mRNA and protein's delay
                 int old_cells_mrna[NUM_INDICES];
                 int old_cells_protein[NUM_INDICES];
-                calculate_delay_indices(sd, baby_cl, baby_j, j, k, rates_active, old_cells_mrna, old_cells_protein);
+                calculate_delay_indices(sd, baby_cls[i], baby_j, j, k, rates_active, old_cells_mrna, old_cells_protein);
                 
                 // Perform biological calculations
-                st_context stc(time_prev, baby_j, k);
-                protein_synthesis(sd, rates_active, baby_cl, stc, old_cells_protein);
-                dimer_proteins(sd,rates_active, baby_cl, stc);
-                mRNA_synthesis(sd, rates_active, baby_cl, stc, old_cells_mrna, p, past_induction, past_recovery);
+                st_context stc(time_prev, baby_js[i], k);
+                protein_synthesis(sd, rates_active, baby_cls[i], stc, old_cells_protein);
+                dimer_proteins(sd,rates_active, baby_cls[i], stc);
+                mRNA_synthesis(sd, rates_active, baby_cls[i], stc, old_cells_mrna, p, past_induction, past_recovery);
     }
 	
 
@@ -443,23 +447,10 @@ __global__ void firstCUDA(sim_data sd, params p, array2D<double> rates_active, c
 void launchkernel(int cells_total,sim_data& sd, params &p,rates& rs, con_levels& baby_cl, int baby_j,int j,int time_prev,bool past_induction, bool past_recovery){
 	//Start timer
 	cudaEvent_t start,stop;
-	//cudaEventCreate(&start);
-	//cudaEventCreate(&stop);
-	//cudaEventRecord(start, 0);
-	
-	//create HOR array for each cell
-	//array2D<int> cHOR(cells,3);
-
-	//Copy arrays to GPU
-	//baby_cl.cons.toGPU();
-	//rs.rates_active.toGPU();
-	//sd.neighbors.toGPU();
-	//baby_cl.toGPU();
-	//int* cx = x[chunk_index]; // the current concentrations array in which to store data
 	
 	//Set dimensions
 	dim3 dimBlock(cells_total,1,1); //each cell had own thread
-	dim3 dimGrid(1,1,1); //simulation done on single block
+	dim3 dimGrid(6,1,1); //simulation done on single block
 	cudaDeviceSetLimit(cudaLimitStackSize, 65536);
 	//Run kernel
 	//findtauCUDA<<<dimGrid,dimBlock>>>(st,critical,cx,cHOR,cells);
@@ -471,156 +462,123 @@ void launchkernel(int cells_total,sim_data& sd, params &p,rates& rs, con_levels&
         cout << "Kernel launch error: " << cudaPeekAtLastError() << "\n";
     }
 
-	//baby_cl.cons.toCPU();
-	//rs.rates_active.toCPU();
-	//sd.neighbors.toCPU();
-	//baby_cl.toCPU();
-	//Stop timer
 	CUDA_ERRCHK(cudaDeviceSynchronize());
-
-	//cudaEventRecord(stop, 0); 
-	//cudaEventSynchronize(stop); 
-	//float elapsedTime; 
-	//cudaEventElapsedTime(&elapsedTime, start, stop); 
-	//cudaEventDestroy(start);
-	//cudaEventDestroy(stop);
-
-	
-	//Print results
-	//cout << "Elapsed time: " << elapsedTime << " milliseconds\n";
-
 }
 
 
-bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data& md, double temp_rates[2]) {
+bool model (sim_data& sd, rates& rs, con_levels cls[], con_levels baby_cls[], mutant_data mds[], double* temp_rates[2]) {
     int steps_elapsed = sd.steps_split; // Used to determine when to split a column of cells
     update_rates(rs, sd.active_start); // Update the active rates based on the base rates, perturbations, and gradients
     
     // Iterate through each time step
     int j; // Absolute time used by cl
     int baby_j; // Cyclical time used by baby_cl
-    bool past_induction = false; // Whether we've passed the point of induction of knockouts or overexpression
-    bool past_recovery = false; // Whether we've recovered from the knockouts or overexpression
+    bool[ip.num_active_mutants] past_induction = false; // Whether we've passed the point of induction of knockouts or overexpression
+    bool[ip.num_active_mutants] past_recovery = false; // Whether we've recovered from the knockouts or overexpression
 	
-
+	for (int i = 0; i < ip.num_active_mutants; i++) {
 	//Copy arrays to GPU
-	baby_cl.cons.allocateGPU();
-	rs.rates_active.allocateGPU();
-	sd.neighbors.allocateGPU();
-	baby_cl.allocateGPU();
-
-	baby_cl.cons.swapToGPU();
-	rs.rates_active.swapToGPU();
-	sd.neighbors.swapToGPU();
-	baby_cl.swapToGPU();
+		baby_cls[i].cons.allocateGPU();
+		rs.rates_active.allocateGPU();
+		sd.neighbors.allocateGPU();
+		baby_cls[i].allocateGPU();
 	
+		baby_cls[i].cons.swapToGPU();
+		rs.rates_active.swapToGPU();
+		sd.neighbors.swapToGPU();
+		baby_cls[i].swapToGPU();
+	}
+
     for (j = sd.time_start, baby_j = 0; j < sd.time_end; j++, baby_j = WRAP(baby_j + 1, sd.max_delay_size)) {
         if (j % 100 == 0) {
 		    cout << "iter " << j << '\n';
         }
 		
-		// only updates base_rates and cell_rates, which are not directly involved in simulation
-		//happeing once each simulation
-        if (!past_induction && !past_recovery && (j  > anterior_time(sd,md.induction))) {
-            //cout<<anterior_time(sd,md.induction)<<endl;
-            knockout(rs, md, 1); //knock down rates after the induction point
-            perturb_rates_all(rs); //This is used for knockout the rate in the existing cells, may need modification
-            past_induction = true;
-        }
-		
-        //if (past_induction && (j + sd.steps_til_growth > md.recovery +sd.max_delay_size)) {
-        if (past_induction && (j > anterior_time(sd,md.recovery))) {
-            revert_knockout(rs, md, temp_rates);
-            past_recovery = true;
-        }
-        
-        
-        
-        int time_prev = WRAP(baby_j - 1, sd.max_delay_size); // Time is cyclical, so time_prev may not be baby_j - 1
-		// try to put this part into GPU calculation
-        //copy_records(sd, baby_cl, baby_j, time_prev); // Copy each cell's birth and parent so the records are accessible at every time step
-       
-        
-        // Iterate through each extant cell
-		//generate params struct with values
-		params p(md);
+		for (int i = 0; i < ip.num_active_mutants; i++) {
+			// only updates base_rates and cell_rates, which are not directly involved in simulation
+			//happeing once each simulation
+    	    if (!past_induction[i] && !past_recovery[i] && (j  > anterior_time(sd,mds[i].induction))) {
+    	        //cout<<anterior_time(sd,md.induction)<<endl;
+    	        knockout(rs, mds[i], 1); //knock down rates after the induction point
+    	        perturb_rates_all(rs); //This is used for knockout the rate in the existing cells, may need modification
+    	        past_induction[i] = true;
+    	    }
+			
+    	    //if (past_induction && (j + sd.steps_til_growth > md.recovery +sd.max_delay_size)) {
+    	    if (past_induction[i] && (j > anterior_time(sd,md.recovery))) {
+    	        revert_knockout(rs, mds[i], temp_rates);
+    	        past_recovery[i] = true;
+    	    }
+    	    
+    	    
+    	    
+    	    int time_prev = WRAP(baby_j - 1, sd.max_delay_size); // Time is cyclical, so time_prev may not be baby_j - 1
+			// try to put this part into GPU calculation
+    	    
+    	    // Iterate through each extant cell
+			//generate params struct with values
+		}
+
+	    params p(mds);
 		launchkernel(sd.cells_total,sd, p, rs, baby_cl, baby_j,j, time_prev, past_induction, past_recovery);
-		
-		// try to put this part into GPU calculation
-        // Check to make sure the numbers are still valid
-        //if (any_less_than_0(baby_cl, baby_j) || concentrations_too_high(baby_cl, baby_j, sd.max_con_thresh)) {
-        //    return false;
-        //}
        
+		for (int i = 0; i < ip.num_active_mutants; i++) {
         // Split cells periodically in anterior simulations
-        if (sd.section == SEC_ANT && (steps_elapsed % sd.steps_split) == 0) {
-			baby_cl.cons.swapToCPU();
-			rs.rates_active.swapPointerToCPU();
-            split(sd, rs, baby_cl, baby_j, j);
-            update_rates(rs, sd.active_start);
-            steps_elapsed = 0;
-			rs.rates_active.swapToGPU();
-			baby_cl.cons.swapToGPU();
-        }
-        
-		// all operations can be executed on CPU, data already on CPU
-        // Update the active record data and split counter
-        steps_elapsed++;
-		//cout<<"model1"<<endl;
-		// Record of the start of the active PSM at each time step
-		baby_cl.swapPointerToCPU();
-        baby_cl.active_start_record[baby_j] = sd.active_start;
-        baby_cl.active_end_record[baby_j] = sd.active_end;
-		baby_cl.swapToGPU();
-		// unilateral copy from baby_cl to cl, which means only form GPU to CPU
-        // Copy from the simulating cl to the analysis cl
-		//cout<<"model2"<<endl;
-        if (baby_j % (sd.max_delay_size)  == 0) {
-			//cout<<"model1"<<endl;
-			baby_cl.cons.swapToCPU();
-			baby_cl.swapPointerToCPU();
-			for (int l =0, m=j-sd.max_delay_size; l<sd.max_delay_size;l++,m++ ){
-           		baby_to_cl(baby_cl, cl, l, m / sd.big_gran);
-			}
-			//cout<<"model2"<<endl;
-			baby_cl.cons.swapPointerToGPU();
-			baby_cl.swapPointerToGPU();
-        }
-		if (j==sd.time_end-2) {
-			//cout<<"model1"<<endl;
-			baby_cl.cons.swapToCPU();
-			baby_cl.swapPointerToCPU();
-			for (int l =0, m=j-baby_j; l<baby_j;l++,m++ ){
-           		baby_to_cl(baby_cl, cl, l, m / sd.big_gran);
-			}
-			//cout<<"model2"<<endl;
-			baby_cl.cons.swapPointerToGPU();
-			baby_cl.swapPointerToGPU();
-        }
-		
+	        if (sd.section == SEC_ANT && (steps_elapsed % sd.steps_split) == 0) {
+				baby_cls[i].cons.swapToCPU();
+				rs.rates_active.swapPointerToCPU();
+    	        split(sd, rs, baby_cls[i], baby_j, j);
+    	        update_rates(rs, sd.active_start);
+    	        steps_elapsed = 0;
+				rs.rates_active.swapToGPU();
+				baby_cls[i].cons.swapToGPU();
+    	    }
+    	    
+			// all operations can be executed on CPU, data already on CPU
+    	    // Update the active record data and split counter
+    	    steps_elapsed++;
+			// Record of the start of the active PSM at each time step
+			baby_cls[i].swapPointerToCPU();
+    	    baby_cls[i].active_start_record[baby_j] = sd.active_start;
+    	    baby_cls[i].active_end_record[baby_j] = sd.active_end;
+			baby_cls[i].swapToGPU();
+			// unilateral copy from baby_cl to cl, which means only form GPU to CPU
+    	    // Copy from the simulating cl to the analysis cl
+    	    if (baby_j % (sd.max_delay_size)  == 0) {
+				baby_cls[i].cons.swapToCPU();
+				baby_cls[i].swapPointerToCPU();
+				for (int l =0, m=j-sd.max_delay_size; l<sd.max_delay_size;l++,m++ ){
+    		       		baby_to_cl(baby_cls[i], cls[i], l, m / sd.big_gran);
+				}
+				baby_cls[i].cons.swapPointerToGPU();
+				baby_cls[i].swapPointerToGPU();
+    	    }
+			if (j==sd.time_end-2) {
+				baby_cls[i].cons.swapToCPU();
+				baby_cls[i].swapPointerToCPU();
+				for (int l =0, m=j-baby_j; l<baby_j;l++,m++ ){
+    	       		baby_to_cl(baby_cls[i], cls[i], l, m / sd.big_gran);
+				}
+				baby_cls[i].cons.swapPointerToGPU();
+				baby_cls[i].swapPointerToGPU();
+    	    }
+		}	
     }
-    cout<<"model1"<<endl;
-	baby_cl.cons.swapToCPU();
-	cout<<"model5"<<endl;
-	rs.rates_active.swapToCPU();
-cout<<"model6"<<endl;
-	sd.neighbors.swapToCPU();
-cout<<"model7"<<endl;
-	baby_cl.swapPointerToGPU();
-	baby_cl.swapToCPU();
-	cout<<"model2"<<endl;
-	baby_cl.cons.deallocateGPU();
-	rs.rates_active.deallocateGPU();
-	sd.neighbors.deallocateGPU();
-	baby_cl.deallocateGPU();
-	baby_cl.swapPointerToCPU();
-	cout<<"model3"<<endl;
-    // Copy the last time step from the simulating cl to the analysis cl and mark where the simulating cl left off time-wise
-    baby_to_cl(baby_cl, cl, WRAP(baby_j - 1, sd.max_delay_size), (j - 1) / sd.big_gran);
-	cout<<"model4"<<endl;
-    sd.time_baby = baby_j;
-	cout<<"model5"<<endl;
-    return true;
+	for (int i = 0; i < ip.num_active_mutants; i++) {
+		baby_cls[i].cons.swapToCPU();
+		rs.rates_active.swapToCPU();
+		sd.neighbors.swapToCPU();
+		baby_cls[i].swapToCPU();
+
+		baby_cls[i].cons.deallocateGPU();
+		rs.rates_active.deallocateGPU();
+		sd.neighbors.deallocateGPU();
+		baby_cls[i].deallocateGPU();
+    	// Copy the last time step from the simulating cl to the analysis cl and mark where the simulating cl left off time-wise
+	    baby_to_cl(baby_cls[i], cls[s], WRAP(baby_j - 1, sd.max_delay_size), (j - 1) / sd.big_gran);
+	    sd.time_baby = baby_j;
+	}
+	return true;
 }
 
 /* calculate_delay_indices calculates where the given cell was at the start of all mRNA and protein delays
