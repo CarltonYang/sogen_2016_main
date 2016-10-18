@@ -26,7 +26,7 @@ debug.hpp contains function declarations for debug.cpp.
 #include "structs.hpp"
 
 bool is_nan(double);
-void print_rs(rates& rs);
+void print_rs(rates_dynamic& rs);
 void print_cl(con_levels&);
 void print_cl_at(con_levels&, int);
 void print_cl_when_nonzero(con_levels&);

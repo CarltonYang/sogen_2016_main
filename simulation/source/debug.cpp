@@ -47,7 +47,7 @@ bool is_nan (volatile double x) {
 		This function prints the base rates, not the active ones ultimately used.
 	todo:
 */
-void print_rs (rates& rs) {
+void print_rs (rates_dynamic& rs) {
 	cerr << "rates:\n";
 	for (int i = 0; i < NUM_RATES; i++) {
 		cerr << "  " << i << ": " << rs.rates_base[i] << "\n";

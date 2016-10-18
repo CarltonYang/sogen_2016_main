@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
 	// Free used memory, close files, etc.
 	delete_mutant_data(mds);
 	delete rs;
-	delete rs_s;
+	delete rs_d;
 	delete_dirs(ip, filenames_dirs);
 	delete_file(file_features);
 	delete_file(file_conditions);

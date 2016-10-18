@@ -284,6 +284,7 @@ struct rates_dynamic {
 	double rates_base[NUM_RATES]; // Base rates taken from the current parameter set
 	array2D<double>  rates_active;
 	array2D<double>  rates_cell;
+    int cells;
 	explicit rates_dynamic (int cells) {
 		memset(this->rates_base, 0, sizeof(this->rates_base));
 		this->cells = cells;
