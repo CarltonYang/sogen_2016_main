@@ -257,51 +257,44 @@ struct input_params {
 		rates_active is the final, active rates that should be used in the simulation.
 	todo:
 */
-struct rates {
-	double rates_base[NUM_RATES]; // Base rates taken from the current parameter set
+struct rates_static {
 	double factors_perturb[NUM_RATES]; // Perturbations (as percentages with 1=100%) taken from the perturbations input file
 	bool using_gradients; // Whether or not any rates have specified perturbations
 	int width; // The total width of the simulation
-	//double* factors_gradient[NUM_RATES]; // Gradients (as arrays of (position, percentage with 1=100%) pairs) taken from the gradients input file
-	
 	bool has_gradient[NUM_RATES]; // Whether each rate has a specified gradient
 	int cells; // The total number of cells in the simulation
-	//double* rates_cell[NUM_RATES]; // Rates per cell that factor in the base rates and each cell's perturbations
-	//double* rates_active[NUM_RATES]; // Rates per cell position that factor in the base rates, each cell's perburations, and the gradients at each position
-	array2D<double>  rates_active;
-	array2D<double>  rates_cell;
+	
 	array2D<double>  factors_gradient;
-	explicit rates (int width, int cells) {
-		memset(this->rates_base, 0, sizeof(this->rates_base));
+	explicit rates_static (int width, int cells) {
 		memset(this->factors_perturb, 0, sizeof(this->factors_perturb));
 		this->using_gradients = false;
 		this->width = width;
 		this->cells = cells;
 		
-		
 		for (int i = 0; i < NUM_RATES; i++) {
-			//this->factors_gradient[i] = new double[width];
-			//for (int j = 0; j < width; j++) {
-			//	this->factors_gradient[i][j] = 1;
-			//}
 			this->has_gradient[i] = false;
-			//this->rates_cell[i] = new double[cells];
-			//this->rates_active[i] = new double[cells];
 		}
 		factors_gradient.initialize1(NUM_RATES, width);
+	}
+	
+	~rates_static () {
+	}
+};
+struct rates_dynamic {
+	double rates_base[NUM_RATES]; // Base rates taken from the current parameter set
+	array2D<double>  rates_active;
+	array2D<double>  rates_cell;
+	explicit rates_dynamic (int cells) {
+		memset(this->rates_base, 0, sizeof(this->rates_base));
+		this->cells = cells;
 		rates_active.initialize(NUM_RATES,cells);
 		rates_cell.initialize(NUM_RATES,cells);
 	}
 	
-	~rates () {
-		/*for (int i = 0; i < NUM_RATES; i++) {
-			delete[] this->factors_gradient[i];
-			delete[] this->rates_cell[i];
-			delete[] this->rates_active[i];
-		}*/
+	~rates_dynamic () {
+		
 	}
 };
-
 /* con_levels contains concentration levels and active records for specific portions of a simulation
 	notes:
 		This is a general struct used in several places so make sure any changes are compatible with the main cl, baby_cl and each mutant's cl.

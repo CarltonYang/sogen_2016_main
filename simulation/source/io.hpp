@@ -34,7 +34,7 @@ void open_file(ofstream*, char*, bool);
 void read_file(input_data*);
 bool parse_param_line(double*, char*, int&);
 void parse_ranges_file (pair <double, double>[], char*);
-void print_passed(input_params&, ofstream*, rates&);
+void print_passed(input_params&, ofstream*, rates_dynamic&);
 void print_concentrations(input_params&, sim_data&, con_levels&, mutant_data&, char*, int);
 void print_cell_columns(input_params&, sim_data&, con_levels&, char*, int);
 void print_osc_features(input_params&, ofstream*, mutant_data[], int, int);

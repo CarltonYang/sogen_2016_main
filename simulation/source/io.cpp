@@ -248,12 +248,12 @@ void parse_ranges_file (pair <double, double> ranges[], char* buffer) {
 		This function prints each parameter separated by a comma, one set per line.
 	todo:
 */
-void print_passed (input_params& ip, ofstream* file_passed, rates& rs) {
+void print_passed (input_params& ip, ofstream* file_passed, rates_dynamic& rs_d) {
 	if (ip.print_passed) { // Print which sets passed only if the user specified it
 		try {
-			*file_passed << rs.rates_base[0];
+			*file_passed << rs_d.rates_base[0];
 			for (int i = 1; i < NUM_RATES; i++) {
-				*file_passed << "," << rs.rates_base[i];
+				*file_passed << "," << rs_d.rates_base[i];
 			}
 			*file_passed << endl;
 		} catch (ofstream::failure) {

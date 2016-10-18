@@ -599,7 +599,7 @@ void read_gradients_params (input_params& ip, input_data& gradients_data) {
 	todo:
 		TODO allow comments in files
 */
-void fill_perturbations (rates& rs, char* perturbs) {
+void fill_perturbations (rates_static& rs, char* perturbs) {
 	if (perturbs != NULL) {
 		static const char* usage_message = "There was an error reading the given perturbations file.";
 		int index = 0;
@@ -640,7 +640,7 @@ void fill_perturbations (rates& rs, char* perturbs) {
 	todo:
 		TODO allow comments in files
 */
-void fill_gradients (rates& rs, char* gradients) {
+void fill_gradients (rates_static& rs, char* gradients) {
 	if (gradients != NULL) {
 		static const char* usage_message = "There was an error reading the given gradients file.";
 		int con; // The index of the concentration
@@ -708,7 +708,7 @@ void fill_gradients (rates& rs, char* gradients) {
 		This function calculates the maximum delay using every parameter set because this way con_levels structs that are sized based on the maximum delay do not have to be resized for every set.
 	todo:
 */
-void calc_max_delay_size (input_params& ip, sim_data& sd, rates& rs, double** sets) {
+void calc_max_delay_size (input_params& ip, sim_data& sd, rates_static& rs, double** sets) {
 	double max = 0;
 	for (int i = 0; i < ip.num_sets; i++) {
 		for (int j = MIN_DELAY; j <= MAX_DELAY; j++) {
@@ -906,7 +906,7 @@ ofstream* create_scores_file (input_params& ip, mutant_data mds[]) {
 
 	20151221: commented out unused mutant initialization.
 */
-mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
+mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates_static& rs) {
 	mutant_data* mds = new mutant_data[sd.num_active_mutants];
 	bool single_mutant = false;
 	if (sd.num_active_mutants == 2) {

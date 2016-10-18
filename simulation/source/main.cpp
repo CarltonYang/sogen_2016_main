@@ -62,8 +62,9 @@ int main(int argc, char** argv) {
 	
 	// Initialize simulation data, rates (and their perturbations and gradients), and mutant data
 	sim_data sd(ip);
-	rates* rs = new rates(sd.width_total, sd.cells_total);
-    
+	rates_static* rs = new rates_static(sd.width_total, sd.cells_total);
+	rates_dynamic* rs_d= new rates_dynamic(sd.cells_total);    
+
 	fill_perturbations(*rs, perturb_data.buffer);
 	fill_gradients(*rs, gradients_data.buffer);
 	calc_max_delay_size(ip, sd, *rs, sets);
@@ -78,11 +79,12 @@ int main(int argc, char** argv) {
 	ofstream* file_scores = create_scores_file(ip, mds);
 	
 	// Perform the actual simulations
-	simulate_all_params(ip, *rs, sd, sets, mds, file_passed, file_scores, filenames_dirs, file_features, file_conditions);
+	simulate_all_params(ip, *rs, *rs_d, sd, sets, mds, file_passed, file_scores, filenames_dirs, file_features, file_conditions);
 	
 	// Free used memory, close files, etc.
 	delete_mutant_data(mds);
 	delete rs;
+	delete rs_s;
 	delete_dirs(ip, filenames_dirs);
 	delete_file(file_features);
 	delete_file(file_conditions);
