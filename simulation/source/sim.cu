@@ -23,6 +23,7 @@
 #include "init.hpp"
 #include "io.hpp"
 #include "structs.hpp"
+#include <vector>
 using namespace std;
 
 extern terminal* term; // Declared in init.cpp
@@ -177,6 +178,9 @@ int simulate_section (int set_num, input_params& ip, sim_data& sd, rates_static&
 
     rates_dynamic rs_ds[ip.num_active_mutants];
     for (int i = 0; i < ip.num_active_mutants; i++) {
+        rs_ds[i].cells=sd.cells_total;
+        rs_ds[i].rates_active.initialize(NUM_RATES,sd.cells_total);
+		rs_ds[i].rates_cell.initialize(NUM_RATES,sd.cells_total);
 		memcpy(rs_ds[i].rates_base,rs_d.rates_base, sizeof(double) * NUM_RATES);
     }
 
@@ -187,11 +191,12 @@ int simulate_section (int set_num, input_params& ip, sim_data& sd, rates_static&
         knockout (rs_ds[i], mds[i], 0);
 	}
 		//cout<<"in simulate_section"<<endl;
-        double current_score[ip.num_active_mutants]= simulate_mutant(set_num, ip, sd, rs, rs_ds, cls, baby_cls, mds, mds[MUTANT_WILDTYPE].feat, dirnames_cons, temp_rates);
+        std::vector<double> current_score(ip.num_active_mutants);
+		current_score = simulate_mutant(set_num, ip, sd, rs, rs_ds, cls, baby_cls, mds, mds[MUTANT_WILDTYPE].feat, dirnames_cons, temp_rates);
 
 
 	 for (int i = 0; i < ip.num_active_mutants; i++) {
-        scores[sd.section * ip.num_active_mutants + i] = current_score[i];
+        scores[sd.section * ip.num_active_mutants + i] = current_score.at(i);
         baby_cls[i].reset();
 
 		//maybe no longer needed?
@@ -334,10 +339,10 @@ inline void revert_knockout (rates_dynamic& rs, mutant_data& md, double orig_rat
 	todo:
  TODO Break up this enormous function.
  */
-double* simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_ds[], con_levels cls[], con_levels baby_cls[], mutant_data mds[], features& wtfeat, char** dirname_cons, double temp_rates[][2]) {
+vector<double> simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_ds[], con_levels cls[], con_levels baby_cls[], mutant_data mds[], features& wtfeat, char** dirname_cons, double temp_rates[][2]) {
 
 	//initiate the return array
-	double score_array[ip.num_active_mutants];
+	std::vector<double> score_array(ip.num_active_mutants);
 
 	for (int i = 0; i < ip.num_active_mutants; i++) {
     	reset_seed(ip, sd); // Reset the seed for each mutant
@@ -426,7 +431,7 @@ double* simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates_stat
 	todo:
  */
 
-__global__ void firstCUDA(sim_data sd, params p, rates_dynamic rs_ds[], con_levels baby_cls[], int baby_j, int j, int time_prev, bool past_induction,bool past_recovery){
+__global__ void firstCUDA(sim_data sd, params p[], array2D<double> rates_active_arr[], con_levels baby_cls[], int baby_j, int j, int time_prev, bool past_induction,bool past_recovery){
 
 	unsigned int k = threadIdx.x;
 	unsigned int i = blockIdx.x;
@@ -438,20 +443,20 @@ __global__ void firstCUDA(sim_data sd, params p, rates_dynamic rs_ds[], con_leve
     			// Calculate the cell indices at the start of each mRNA and protein's delay
                 int old_cells_mrna[NUM_INDICES];
                 int old_cells_protein[NUM_INDICES];
-                calculate_delay_indices(sd, baby_cls[i], baby_j, j, k, rs_ds[i].rates_active, old_cells_mrna, old_cells_protein);
+                calculate_delay_indices(sd, baby_cls[i], baby_j, j, k, rates_active_arr[i], old_cells_mrna, old_cells_protein);
                 
                 // Perform biological calculations
                 st_context stc(time_prev, baby_j, k);
-                protein_synthesis(sd, rs_ds[i].rates_active, baby_cls[i], stc, old_cells_protein);
-                dimer_proteins(sd,rs_ds[i].rates_active, baby_cls[i], stc);
-                mRNA_synthesis(sd, rs_ds[i].rates_active, baby_cls[i], stc, old_cells_mrna, p, past_induction, past_recovery);
+                protein_synthesis(sd, rates_active_arr[i], baby_cls[i], stc, old_cells_protein);
+                dimer_proteins(sd,rates_active_arr[i], baby_cls[i], stc);
+                mRNA_synthesis(sd, rates_active_arr[i], baby_cls[i], stc, old_cells_mrna, p[i], past_induction, past_recovery);
     }
 	
 
 
 }
 
-void launchkernel(int cells_total,sim_data& sd, params &p, rates_dynamic rs_ds[],con_levels baby_cls[], int baby_j,int j,int time_prev,bool past_induction, bool past_recovery){
+void launchkernel(int cells_total,sim_data& sd, params p[], array2D<double> rates_active_arr[],con_levels baby_cls[], int baby_j,int j,int time_prev,bool past_induction, bool past_recovery){
 	//Start timer
 	cudaEvent_t start,stop;
 	
@@ -461,7 +466,7 @@ void launchkernel(int cells_total,sim_data& sd, params &p, rates_dynamic rs_ds[]
 	cudaDeviceSetLimit(cudaLimitStackSize, 65536);
 	//Run kernel
 	//findtauCUDA<<<dimGrid,dimBlock>>>(st,critical,cx,cHOR,cells);
-	firstCUDA<<<dimGrid, dimBlock>>>(sd, p, rs_ds, baby_cls, baby_j, j, time_prev,past_induction, past_recovery);
+	firstCUDA<<<dimGrid, dimBlock>>>(sd, p, rates_active_arr, baby_cls, baby_j, j, time_prev,past_induction, past_recovery);
 
 	CUDA_ERRCHK(cudaDeviceSynchronize());	
 	//convert back to CPU
@@ -531,8 +536,18 @@ bool model (input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_d
 			//generate params struct with values
 		}
 
-	    params p(mds);
-		launchkernel(sd.cells_total,sd, p, rs_ds, baby_cls, baby_j,j, time_prev, past_induction, past_recovery);
+		params p[ip.num_active_mutants];
+	    for (int i = 0; i < ip.num_active_mutants; i++) {
+			p[i].initialize(mds[i]);
+		}
+	    
+        array2D<double> rates_active_arr[ip.num_active_mutants];
+		 for (int i = 0; i < ip.num_active_mutants; i++) {
+			rates_active_arr[i].initialize(NUM_RATES, sd.cells_total);
+			rates_active_arr[i]=rs_ds[i].rates_active;
+		}
+
+		launchkernel(sd.cells_total,sd, p, rates_active_arr, baby_cls, baby_j,j, time_prev, past_induction, past_recovery);
        
 		for (int i = 0; i < ip.num_active_mutants; i++) {
         // Split cells periodically in anterior simulations

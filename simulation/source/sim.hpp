@@ -24,7 +24,7 @@ sim.hpp contains function declarations for sim.cpp.
 #define SIM_HPP
 
 #include "structs.hpp"
-
+#include <vector>
 using namespace std;
 
 void simulate_all_params(input_params&, rates_static&, rates_dynamic&, sim_data&, double**, mutant_data[], ofstream*, ofstream*, char**, ofstream*, ofstream*);
@@ -37,7 +37,7 @@ void mutant_sim_message(mutant_data&, int);
 void store_original_rates (rates_dynamic&, mutant_data&, double[]);
 void knockout(rates_dynamic& rs, mutant_data&, bool induction);
 void revert_knockout(rates_dynamic& rs, mutant_data&, double[]);
-double simulate_mutant(int, input_params&, sim_data&, rates_static&, rates_dynamic[], con_levels[], con_levels[], mutant_data[], features&, char**, double[][2]);
+vector<double> simulate_mutant(int, input_params&, sim_data&, rates_static&, rates_dynamic[], con_levels[], con_levels[], mutant_data[], features&, char**, double[][2]);
 bool model(input_params&, sim_data&, rates_static&, rates_dynamic[], con_levels[], con_levels[], mutant_data[], double[][2]);
 void calculate_delay_indices (sim_data&, con_levels&, int, int, int, array2D<double>&, int[], int[]);
 int index_with_splits(sim_data&, con_levels&, int, int, int, double);

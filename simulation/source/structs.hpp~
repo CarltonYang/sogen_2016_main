@@ -285,11 +285,15 @@ struct rates_dynamic {
 	array2D<double>  rates_active;
 	array2D<double>  rates_cell;
     int cells;
+	rates_dynamic(){
+		memset(this->rates_base, 0, sizeof(this->rates_base));
+    }
+
 	explicit rates_dynamic (int cells) {
 		memset(this->rates_base, 0, sizeof(this->rates_base));
 		this->cells = cells;
-		rates_active.initialize(NUM_RATES,cells);
-		rates_cell.initialize(NUM_RATES,cells);
+		this->rates_active.initialize(NUM_RATES,cells);
+		this->rates_cell.initialize(NUM_RATES,cells);
 	}
 	
 	~rates_dynamic () {
@@ -875,10 +879,13 @@ struct params{
 	
 	double overexpression_rate;  
 	double overexpression_factor;
+	
+	params(){};
 
-	params(mutant_data& md): 
-		overexpression_rate(md.overexpression_rate),overexpression_factor(md.overexpression_factor){}
-
+	void initialize(mutant_data& md){
+		this->overexpression_rate=md.overexpression_rate;
+        this->overexpression_factor=md.overexpression_factor;
+	}
 
 };
 #endif

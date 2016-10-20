@@ -34,26 +34,24 @@ public:
 		}
         T *_array;
     };
-
+	
+	array2D(){
+    }
 
    
     array2D(int height =0,  int width =0)
 		:_height(height),_width(width),_cuda(false){
         allocate_array();
     }
-#if 0    
+    
+
     array2D(const array2D<T>& other)
 		:_height(other._height),_width(other._width),_cuda(other._cuda){
-        allocate_array();
-        for (int he=0; he< _height; he++){
-                for (int wi=0; wi< _width; wi++){
-                    _array[he*_width+wi]=other._array[he*_width+wi];
-					_darray[he*_width+wi]=other._darray[he*_width+wi];
-                }
-            
-        }
+        //allocate_array();
+			_array=other._array;
+			_darray=other._darray;
     }
-#endif
+
     
 	void initialize(int height, int width){
         dealloc_array();
@@ -182,6 +180,7 @@ public:
 	void swapPointerToCPU(){
 		_cuda=false;
 	}
+
 protected:
     void dealloc_array(){
         if (_array){
