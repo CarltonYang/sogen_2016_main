@@ -500,20 +500,7 @@ bool model (input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_d
 		p[i].initialize(mds[i]);
 	}
 
-	array2D<double> *rates_active_darray;
-	int size_array2D=ip.num_active_mutants* sizeof(array2D<double>);
-	CUDA_ERRCHK(cudaMalloc((void**)&rates_active_darray, size_array2D));
-	CUDA_ERRCHK(cudaMemcpy(rates_active_darray,rates_active_arr,size_array2D,cudaMemcpyHostToDevice));
-
-    con_levels *baby_cls_darray;
-	int size_array_babycl=ip.num_active_mutants* sizeof(con_levels);
-	CUDA_ERRCHK(cudaMalloc((void**)&baby_cls_darray, size_array_babycl));
-	CUDA_ERRCHK(cudaMemcpy(baby_cls_darray,baby_cls,size_array_babycl,cudaMemcpyHostToDevice));
-
-    params *p_darray;
-	int size_array_p=ip.num_active_mutants* sizeof(params);
-	CUDA_ERRCHK(cudaMalloc((void**)&p_darray, size_array_p));
-	CUDA_ERRCHK(cudaMemcpy(p_darray,p,size_array_p,cudaMemcpyHostToDevice));
+	
 
     for (int i = 0; i < ip.num_active_mutants; i++) {
          past_induction[i]=false;
@@ -533,7 +520,20 @@ bool model (input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_d
 		baby_cls[i].swapToGPU();
 	}
 
+	array2D<double> *rates_active_darray;
+	int size_array2D=ip.num_active_mutants* sizeof(array2D<double>);
+	CUDA_ERRCHK(cudaMalloc((void**)&rates_active_darray, size_array2D));
+	CUDA_ERRCHK(cudaMemcpy(rates_active_darray,rates_active_arr,size_array2D,cudaMemcpyHostToDevice));
 
+    con_levels *baby_cls_darray;
+	int size_array_babycl=ip.num_active_mutants* sizeof(con_levels);
+	CUDA_ERRCHK(cudaMalloc((void**)&baby_cls_darray, size_array_babycl));
+	CUDA_ERRCHK(cudaMemcpy(baby_cls_darray,baby_cls,size_array_babycl,cudaMemcpyHostToDevice));
+
+    params *p_darray;
+	int size_array_p=ip.num_active_mutants* sizeof(params);
+	CUDA_ERRCHK(cudaMalloc((void**)&p_darray, size_array_p));
+	CUDA_ERRCHK(cudaMemcpy(p_darray,p,size_array_p,cudaMemcpyHostToDevice));
     int time_prev=0;
     for (j = sd.time_start, baby_j = 0; j < sd.time_end; j++, baby_j = WRAP(baby_j + 1, sd.max_delay_size)) {
         if (j % 100 == 0) {
