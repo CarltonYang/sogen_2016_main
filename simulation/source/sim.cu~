@@ -456,7 +456,7 @@ __global__ void firstCUDA(sim_data sd, params p[], array2D<double> rates_active_
 
 }
 
-void launchkernel(int cells_total,sim_data& sd, params p[], array2D<double> rates_active_arr[],con_levels baby_cls[], int baby_j,int j,int time_prev,bool past_induction, bool past_recovery){
+void launchkernel(int cells_total,sim_data& sd, params p_darray[], array2D<double> rates_active_darray[],con_levels baby_cls_darray[], int baby_j,int j,int time_prev,bool past_induction, bool past_recovery){
 	//Start timer
 	cudaEvent_t start,stop;
 	
@@ -466,7 +466,7 @@ void launchkernel(int cells_total,sim_data& sd, params p[], array2D<double> rate
 	cudaDeviceSetLimit(cudaLimitStackSize, 65536);
 	//Run kernel
 	//findtauCUDA<<<dimGrid,dimBlock>>>(st,critical,cx,cHOR,cells);
-	firstCUDA<<<dimGrid, dimBlock>>>(sd, p, rates_active_arr, baby_cls, baby_j, j, time_prev,past_induction, past_recovery);
+	firstCUDA<<<dimGrid, dimBlock>>>(sd, p_darray, rates_active_darray, baby_cls_darray, baby_j, j, time_prev,past_induction, past_recovery);
 
 	CUDA_ERRCHK(cudaDeviceSynchronize());	
 	//convert back to CPU
@@ -478,7 +478,7 @@ void launchkernel(int cells_total,sim_data& sd, params p[], array2D<double> rate
 }
 
 
-bool model (input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_ds[], con_levels cls[], con_levels baby_cls[], mutant_data mds[], double* temp_rates[2]) {
+bool model (input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_ds[], con_levels cls[], con_levels baby_cls[], mutant_data mds[], double temp_rates[][2]) {
     int steps_elapsed = sd.steps_split; // Used to determine when to split a column of cells
     for (int i = 0; i < ip.num_active_mutants; i++) {
         update_rates(rs, rs_ds[i], sd.active_start); // Update the active rates based on the base rates, perturbations, and gradients
@@ -488,6 +488,33 @@ bool model (input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_d
     int baby_j; // Cyclical time used by baby_cl
     bool past_induction[ip.num_active_mutants]; // Whether we've passed the point of induction of knockouts or overexpression
     bool past_recovery[ip.num_active_mutants]; // Whether we've recovered from the knockouts or overexpression
+
+
+	array2D<double> rates_active_arr[ip.num_active_mutants];
+	for (int i = 0; i < ip.num_active_mutants; i++) {
+		rates_active_arr[i]=rs_ds[i].rates_active;
+	}
+
+	params p[ip.num_active_mutants];
+    for (int i = 0; i < ip.num_active_mutants; i++) {
+		p[i].initialize(mds[i]);
+	}
+
+	array2D<double> *rates_active_darray;
+	int size_array2D=ip.num_active_mutants* sizeof(array2D<double>);
+	CUDA_ERRCHK(cudaMalloc((void**)&rates_active_darray, size_array2D));
+	CUDA_ERRCHK(cudaMemcpy(rates_active_darray,rates_active_arr,size_array2D,cudaMemcpyHostToDevice));
+
+    con_levels *baby_cls_darray;
+	int size_array_babycl=ip.num_active_mutants* sizeof(con_levels);
+	CUDA_ERRCHK(cudaMalloc((void**)&baby_cls_darray, size_array_babycl));
+	CUDA_ERRCHK(cudaMemcpy(baby_cls_darray,baby_cls,size_array_babycl,cudaMemcpyHostToDevice));
+
+    params *p_darray;
+	int size_array_p=ip.num_active_mutants* sizeof(params);
+	CUDA_ERRCHK(cudaMalloc((void**)&p_darray, size_array_p));
+	CUDA_ERRCHK(cudaMemcpy(p_darray,p,size_array_p,cudaMemcpyHostToDevice));
+
     for (int i = 0; i < ip.num_active_mutants; i++) {
          past_induction[i]=false;
          past_recovery[i]=false;
@@ -505,6 +532,8 @@ bool model (input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_d
 		sd.neighbors.swapToGPU();
 		baby_cls[i].swapToGPU();
 	}
+
+
     int time_prev=0;
     for (j = sd.time_start, baby_j = 0; j < sd.time_end; j++, baby_j = WRAP(baby_j + 1, sd.max_delay_size)) {
         if (j % 100 == 0) {
@@ -536,18 +565,11 @@ bool model (input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_d
 			//generate params struct with values
 		}
 
-		params p[ip.num_active_mutants];
-	    for (int i = 0; i < ip.num_active_mutants; i++) {
-			p[i].initialize(mds[i]);
-		}
+		
 	    
-        array2D<double> rates_active_arr[ip.num_active_mutants];
-		 for (int i = 0; i < ip.num_active_mutants; i++) {
-			rates_active_arr[i].initialize(NUM_RATES, sd.cells_total);
-			rates_active_arr[i]=rs_ds[i].rates_active;
-		}
+        
 
-		launchkernel(sd.cells_total,sd, p, rates_active_arr, baby_cls, baby_j,j, time_prev, past_induction, past_recovery);
+		launchkernel(sd.cells_total,sd, p_darray, rates_active_darray, baby_cls_darray, baby_j,j, time_prev, past_induction, past_recovery);
        
 		for (int i = 0; i < ip.num_active_mutants; i++) {
         // Split cells periodically in anterior simulations
