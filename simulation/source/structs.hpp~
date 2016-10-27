@@ -343,11 +343,11 @@ struct con_levels {
 
 	void swapToCPU(){
 		int size = time_steps*sizeof(int);
-		CUDA_ERRCHK(cudaMemcpy(active_start_record,_active_start_record,size,cudaMemcpyDeviceToHost));
+		CUDA_ERRCHK(cudaMemcpy(_active_start_record,active_start_record,size,cudaMemcpyDeviceToHost));
 		int* temp= active_start_record;
 		active_start_record=_active_start_record;
 		_active_start_record=temp;
-		CUDA_ERRCHK(cudaMemcpy(active_end_record,_active_end_record,size,cudaMemcpyDeviceToHost));
+		CUDA_ERRCHK(cudaMemcpy(_active_end_record,active_end_record,size,cudaMemcpyDeviceToHost));
 		temp= active_end_record;
 		active_end_record=_active_end_record;
 		_active_end_record=temp;
