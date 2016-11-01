@@ -294,12 +294,13 @@ void accept_input_params (int num_args, char** args, input_params& ip) {
 			} else if (option_set(option, "-M", "--mutants")) {
 				ensure_nonempty(option, value);
 				ip.num_active_mutants = atoi(value);
-				if (ip.num_active_mutants < 1 || ip.num_active_mutants > NUM_MUTANTS) {
+				ip.num_active_mutants = ip.num_active_mutants * 3;
+				/*if (ip.num_active_mutants < 1 || ip.num_active_mutants > NUM_MUTANTS) {
 					int strlen_num = INT_STRLEN(NUM_MUTANTS);
 					char* message = new char[(strlen("The number of mutants to run must be a positive integer up to the number of coded-in mutants. Set -M or --mutants to be at least 1 and no more than .") + strlen_num + 1)];
 					sprintf(message, "The number of mutants to run must be a positive integer up to the number of coded-in mutants. Set -M or --mutants to be at least 1 and no more than %d.", NUM_MUTANTS);
 					usage(message);
-				}
+				}*/
 			} else if (option_set(option, "-I", "--pipe-in")) {
 				ensure_nonempty(option, value);
 				ip.piping = true;
@@ -926,138 +927,143 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates_static& r
 		mds[i].cl.initialize(NUM_CON_LEVELS, sd.max_delay_size, sd.cells_total, sd.active_start);
 	}
 	
+
+	for (int loopIdx=0; loopIdx< (sd.num_active_mutants/6); loopIdx++){
+
+	int loopIdx2= loopIdx*(6);
 	// Wild type
-	mds[MUTANT_WILDTYPE].print_name = copy_str("wildtype");
-	mds[MUTANT_WILDTYPE].dir_name = copy_str("wildtype");
-	mds[MUTANT_WILDTYPE].num_knockouts = 0;
-	mds[MUTANT_WILDTYPE].induction = 0;
-    mds[MUTANT_WILDTYPE].recovery = 999999999;
-    mds[MUTANT_WILDTYPE].overexpression_rate = -1;
-    mds[MUTANT_WILDTYPE].overexpression_factor = 0;
-	mds[MUTANT_WILDTYPE].tests[SEC_POST] = test_wildtype_post;
-	mds[MUTANT_WILDTYPE].tests[SEC_ANT] = test_wildtype_ant;
-    mds[MUTANT_WILDTYPE].num_conditions[SEC_POST] = 2;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_POST][0] = CW_A;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_POST][1] = CW_A;
-	mds[MUTANT_WILDTYPE].num_conditions[SEC_ANT] = 9;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][1] = CW_A;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][2] = CW_B;
-    mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][3] = CW_B;
-    mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][4] = CW_A;
-    mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][5] = CW_A;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][6] = CW_A;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][7] = CW_A;
-	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][8] = CW_B;
-	mds[MUTANT_WILDTYPE].calc_max_scores();
-    
-    mds[MUTANT_WILDTYPE].print_con = CMMESPB;
+	mds[MUTANT_WILDTYPE +loopIdx2].print_name = copy_str("wildtype");
+	mds[MUTANT_WILDTYPE +loopIdx2].dir_name = copy_str("wildtype");
+	mds[MUTANT_WILDTYPE +loopIdx2].num_knockouts = 0;
+	mds[MUTANT_WILDTYPE +loopIdx2].induction = 0;
+    mds[MUTANT_WILDTYPE +loopIdx2].recovery = 999999999;
+    mds[MUTANT_WILDTYPE +loopIdx2].overexpression_rate = -1;
+    mds[MUTANT_WILDTYPE +loopIdx2].overexpression_factor = 0;
+	mds[MUTANT_WILDTYPE +loopIdx2].tests[SEC_POST] = test_wildtype_post;
+	mds[MUTANT_WILDTYPE +loopIdx2].tests[SEC_ANT] = test_wildtype_ant;
+    mds[MUTANT_WILDTYPE +loopIdx2].num_conditions[SEC_POST] = 2;
+	mds[MUTANT_WILDTYPE +loopIdx2].cond_scores[SEC_POST][0] = CW_A;
+	mds[MUTANT_WILDTYPE +loopIdx2].cond_scores[SEC_POST][1] = CW_A;
+	mds[MUTANT_WILDTYPE +loopIdx2].num_conditions[SEC_ANT] = 9;
+	mds[MUTANT_WILDTYPE +loopIdx2].cond_scores[SEC_ANT][0] = CW_A;
+	mds[MUTANT_WILDTYPE +loopIdx2].cond_scores[SEC_ANT][1] = CW_A;
+	mds[MUTANT_WILDTYPE +loopIdx2].cond_scores[SEC_ANT][2] = CW_B;
+    mds[MUTANT_WILDTYPE +loopIdx2].cond_scores[SEC_ANT][3] = CW_B;
+    mds[MUTANT_WILDTYPE +loopIdx2].cond_scores[SEC_ANT][4] = CW_A;
+    mds[MUTANT_WILDTYPE +loopIdx2].cond_scores[SEC_ANT][5] = CW_A;
+	mds[MUTANT_WILDTYPE +loopIdx2].cond_scores[SEC_ANT][6] = CW_A;
+	mds[MUTANT_WILDTYPE +loopIdx2].cond_scores[SEC_ANT][7] = CW_A;
+	mds[MUTANT_WILDTYPE +loopIdx2].cond_scores[SEC_ANT][8] = CW_B;
+	mds[MUTANT_WILDTYPE +loopIdx2].calc_max_scores();
+    mds[MUTANT_WILDTYPE +loopIdx2].print_con = CMMESPB;
 	//mds[MUTANT_WILDTYPE].secs_passed[SEC_WAVE] = true;
 	
     
     
   	// Delta
 	if (MUTANT_DELTA >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_DELTA].print_name = copy_str("delta mutant");
-	mds[MUTANT_DELTA].dir_name = copy_str("delta");
-	mds[MUTANT_DELTA].num_knockouts = 1;
-	mds[MUTANT_DELTA].knockouts[0] = RPSDELTA;
-	mds[MUTANT_DELTA].induction = 0;
-    mds[MUTANT_DELTA].recovery = 999999999;
-    mds[MUTANT_DELTA].overexpression_rate = -1;
-    mds[MUTANT_DELTA].overexpression_factor = 0;
-	mds[MUTANT_DELTA].tests[SEC_POST] = test_delta_mutant_post;
-	mds[MUTANT_DELTA].tests[SEC_ANT] = test_delta_mutant_ant;
-	mds[MUTANT_DELTA].num_conditions[SEC_POST] = 1;
-	mds[MUTANT_DELTA].cond_scores[SEC_POST][0] = CW_A;
-	mds[MUTANT_DELTA].num_conditions[SEC_ANT] = 4;
-	mds[MUTANT_DELTA].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_DELTA].cond_scores[SEC_ANT][1] = CW_A;
-    mds[MUTANT_DELTA].cond_scores[SEC_ANT][2] = CW_A;
-    mds[MUTANT_DELTA].cond_scores[SEC_ANT][3] = CW_A;
-    mds[MUTANT_DELTA].calc_max_scores();
-    mds[MUTANT_DELTA].print_con = CMDELTA;
+	mds[MUTANT_DELTA +loopIdx2].print_name = copy_str("delta mutant");
+	mds[MUTANT_DELTA +loopIdx2].dir_name = copy_str("delta");
+	mds[MUTANT_DELTA +loopIdx2].num_knockouts = 1;
+	mds[MUTANT_DELTA +loopIdx2].knockouts[0] = RPSDELTA;
+	mds[MUTANT_DELTA +loopIdx2].induction = 0;
+    mds[MUTANT_DELTA +loopIdx2].recovery = 999999999;
+    mds[MUTANT_DELTA +loopIdx2].overexpression_rate = -1;
+    mds[MUTANT_DELTA +loopIdx2].overexpression_factor = 0;
+	mds[MUTANT_DELTA +loopIdx2].tests[SEC_POST] = test_delta_mutant_post;
+	mds[MUTANT_DELTA +loopIdx2].tests[SEC_ANT] = test_delta_mutant_ant;
+	mds[MUTANT_DELTA +loopIdx2].num_conditions[SEC_POST] = 1;
+	mds[MUTANT_DELTA +loopIdx2].cond_scores[SEC_POST][0] = CW_A;
+	mds[MUTANT_DELTA +loopIdx2].num_conditions[SEC_ANT] = 4;
+	mds[MUTANT_DELTA +loopIdx2].cond_scores[SEC_ANT][0] = CW_A;
+	mds[MUTANT_DELTA +loopIdx2].cond_scores[SEC_ANT][1] = CW_A;
+    mds[MUTANT_DELTA +loopIdx2].cond_scores[SEC_ANT][2] = CW_A;
+    mds[MUTANT_DELTA +loopIdx2].cond_scores[SEC_ANT][3] = CW_A;
+    mds[MUTANT_DELTA +loopIdx2].calc_max_scores();
+    mds[MUTANT_DELTA +loopIdx2].print_con = CMDELTA;
 	
      
 	// Her1-overexpressed
 	if (MUTANT_HER1OVER >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_HER1OVER].print_name = copy_str("her1-overexpressed mutant");
-	mds[MUTANT_HER1OVER].dir_name = copy_str("her1over");
-	mds[MUTANT_HER1OVER].num_knockouts = 0;
-	mds[MUTANT_HER1OVER].induction = ip.her1_induction / ip.step_size;
-    mds[MUTANT_HER1OVER].recovery = ip.her1_induction / ip.step_size + (30/sd.step_size);
-    mds[MUTANT_HER1OVER].overexpression_rate = RMSH1;
-    mds[MUTANT_HER1OVER].overexpression_factor = 5 ;
+	mds[MUTANT_HER1OVER +loopIdx2].print_name = copy_str("her1-overexpressed mutant");
+	mds[MUTANT_HER1OVER +loopIdx2].dir_name = copy_str("her1over");
+	mds[MUTANT_HER1OVER +loopIdx2].num_knockouts = 0;
+	mds[MUTANT_HER1OVER +loopIdx2].induction = ip.her1_induction / ip.step_size;
+    mds[MUTANT_HER1OVER +loopIdx2].recovery = ip.her1_induction / ip.step_size + (30/sd.step_size);
+    mds[MUTANT_HER1OVER +loopIdx2].overexpression_rate = RMSH1;
+    mds[MUTANT_HER1OVER +loopIdx2].overexpression_factor = 5 ;
    
-	mds[MUTANT_HER1OVER].tests[SEC_POST] = test_her1over_mutant_post;
-	mds[MUTANT_HER1OVER].tests[SEC_ANT] = test_her1over_mutant_ant;
-	mds[MUTANT_HER1OVER].num_conditions[SEC_POST] = 0;
-    mds[MUTANT_HER1OVER].num_conditions[SEC_ANT] = 4;
-	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][1] = CW_A;
-	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][2] = CW_A;
-	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][3] = CW_A;
-	mds[MUTANT_HER1OVER].calc_max_scores();
-	mds[MUTANT_HER1OVER].print_con = CMH1;
+	mds[MUTANT_HER1OVER +loopIdx2].tests[SEC_POST] = test_her1over_mutant_post;
+	mds[MUTANT_HER1OVER +loopIdx2].tests[SEC_ANT] = test_her1over_mutant_ant;
+	mds[MUTANT_HER1OVER +loopIdx2].num_conditions[SEC_POST] = 0;
+    mds[MUTANT_HER1OVER +loopIdx2].num_conditions[SEC_ANT] = 4;
+	mds[MUTANT_HER1OVER +loopIdx2].cond_scores[SEC_ANT][0] = CW_A;
+	mds[MUTANT_HER1OVER +loopIdx2].cond_scores[SEC_ANT][1] = CW_A;
+	mds[MUTANT_HER1OVER +loopIdx2].cond_scores[SEC_ANT][2] = CW_A;
+	mds[MUTANT_HER1OVER +loopIdx2].cond_scores[SEC_ANT][3] = CW_A;
+	mds[MUTANT_HER1OVER +loopIdx2].calc_max_scores();
+	mds[MUTANT_HER1OVER +loopIdx2].print_con = CMH1;
 	
     // DAPT
 	if (MUTANT_DAPT >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_DAPT].print_name = copy_str("DAPT mutant");
-	mds[MUTANT_DAPT].dir_name = copy_str("DAPT");
-	mds[MUTANT_DAPT].num_knockouts = 1; 
-	mds[MUTANT_DAPT].knockouts[0] = RPSDELTA;
-	mds[MUTANT_DAPT].induction = ip.DAPT_induction / ip.step_size;
-    mds[MUTANT_DAPT].recovery = 999999999;
-    mds[MUTANT_DAPT].overexpression_rate = -1;
-    mds[MUTANT_DAPT].overexpression_factor = 0;
-	mds[MUTANT_DAPT].tests[SEC_POST] = test_DAPT_mutant_post;
-	mds[MUTANT_DAPT].tests[SEC_ANT] = test_DAPT_mutant_ant;
-	mds[MUTANT_DAPT].num_conditions[SEC_ANT] = 4;
-	mds[MUTANT_DAPT].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_DAPT].cond_scores[SEC_ANT][1] = CW_A;
-	mds[MUTANT_DAPT].cond_scores[SEC_ANT][2] = CW_A;
-	mds[MUTANT_DAPT].cond_scores[SEC_ANT][3] = CW_A;
-    mds[MUTANT_DAPT].print_con= CMDELTA;
-	mds[MUTANT_DAPT].calc_max_scores();
+	mds[MUTANT_DAPT +loopIdx2].print_name = copy_str("DAPT mutant");
+	mds[MUTANT_DAPT +loopIdx2].dir_name = copy_str("DAPT");
+	mds[MUTANT_DAPT +loopIdx2].num_knockouts = 1; 
+	mds[MUTANT_DAPT +loopIdx2].knockouts[0] = RPSDELTA;
+	mds[MUTANT_DAPT +loopIdx2].induction = ip.DAPT_induction / ip.step_size;
+    mds[MUTANT_DAPT +loopIdx2].recovery = 999999999;
+    mds[MUTANT_DAPT +loopIdx2].overexpression_rate = -1;
+    mds[MUTANT_DAPT +loopIdx2].overexpression_factor = 0;
+	mds[MUTANT_DAPT +loopIdx2].tests[SEC_POST] = test_DAPT_mutant_post;
+	mds[MUTANT_DAPT +loopIdx2].tests[SEC_ANT] = test_DAPT_mutant_ant;
+	mds[MUTANT_DAPT +loopIdx2].num_conditions[SEC_ANT] = 4;
+	mds[MUTANT_DAPT +loopIdx2].cond_scores[SEC_ANT][0] = CW_A;
+	mds[MUTANT_DAPT +loopIdx2].cond_scores[SEC_ANT][1] = CW_A;
+	mds[MUTANT_DAPT +loopIdx2].cond_scores[SEC_ANT][2] = CW_A;
+	mds[MUTANT_DAPT +loopIdx2].cond_scores[SEC_ANT][3] = CW_A;
+    mds[MUTANT_DAPT +loopIdx2].print_con= CMDELTA;
+	mds[MUTANT_DAPT +loopIdx2].calc_max_scores();
 	
 	
 	// MESPAOVER
 	if (MUTANT_MESPAOVER >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_MESPAOVER].print_name = copy_str("MESPAOVER mutant");
-	mds[MUTANT_MESPAOVER].dir_name = copy_str("MESPAOVER");
-	mds[MUTANT_MESPAOVER].num_knockouts = 0;
-	mds[MUTANT_MESPAOVER].induction = ip.mespa_induction / ip.step_size;
-    mds[MUTANT_MESPAOVER].recovery = ip.mespa_induction / ip.step_size + (30/sd.step_size);
-    mds[MUTANT_MESPAOVER].overexpression_rate = RMSMESPA ;
-    mds[MUTANT_MESPAOVER].overexpression_factor = 5;
-	mds[MUTANT_MESPAOVER].tests[SEC_POST] = test_MESPAOVER_mutant_post;
-	mds[MUTANT_MESPAOVER].tests[SEC_ANT] = test_MESPAOVER_mutant_ant;
-	mds[MUTANT_MESPAOVER].num_conditions[SEC_POST] = 0;
-	mds[MUTANT_MESPAOVER].num_conditions[SEC_ANT] = 1;
-	mds[MUTANT_MESPAOVER].cond_scores[SEC_ANT][0] = CW_A;
-    mds[MUTANT_MESPAOVER].print_con= CMMESPA;
-	mds[MUTANT_MESPAOVER].calc_max_scores();
+	mds[MUTANT_MESPAOVER +loopIdx2].print_name = copy_str("MESPAOVER mutant");
+	mds[MUTANT_MESPAOVER +loopIdx2].dir_name = copy_str("MESPAOVER");
+	mds[MUTANT_MESPAOVER +loopIdx2].num_knockouts = 0;
+	mds[MUTANT_MESPAOVER +loopIdx2].induction = ip.mespa_induction / ip.step_size;
+    mds[MUTANT_MESPAOVER +loopIdx2].recovery = ip.mespa_induction / ip.step_size + (30/sd.step_size);
+    mds[MUTANT_MESPAOVER +loopIdx2].overexpression_rate = RMSMESPA ;
+    mds[MUTANT_MESPAOVER +loopIdx2].overexpression_factor = 5;
+	mds[MUTANT_MESPAOVER +loopIdx2].tests[SEC_POST] = test_MESPAOVER_mutant_post;
+	mds[MUTANT_MESPAOVER +loopIdx2].tests[SEC_ANT] = test_MESPAOVER_mutant_ant;
+	mds[MUTANT_MESPAOVER +loopIdx2].num_conditions[SEC_POST] = 0;
+	mds[MUTANT_MESPAOVER +loopIdx2].num_conditions[SEC_ANT] = 1;
+	mds[MUTANT_MESPAOVER +loopIdx2].cond_scores[SEC_ANT][0] = CW_A;
+    mds[MUTANT_MESPAOVER +loopIdx2].print_con= CMMESPA;
+	mds[MUTANT_MESPAOVER +loopIdx2].calc_max_scores();
 	
 	
 	//MESPBOVER
 	if (MUTANT_MESPBOVER >= sd.num_active_mutants && single_mutant==false) {return mds;}
-	mds[MUTANT_MESPBOVER].print_name = copy_str("MESPbOVER mutant");
-	mds[MUTANT_MESPBOVER].dir_name = copy_str("MESPBOVER");
-	mds[MUTANT_MESPBOVER].num_knockouts = 0; 
+	mds[MUTANT_MESPBOVER +loopIdx2].print_name = copy_str("MESPbOVER mutant");
+	mds[MUTANT_MESPBOVER +loopIdx2].dir_name = copy_str("MESPBOVER");
+	mds[MUTANT_MESPBOVER +loopIdx2].num_knockouts = 0; 
 
-	mds[MUTANT_MESPBOVER].induction = ip.mespb_induction / ip.step_size;
-    mds[MUTANT_MESPBOVER].recovery = ip.mespb_induction / ip.step_size + (30/sd.step_size);
-    mds[MUTANT_MESPBOVER].overexpression_rate = RMSMESPB;
-    mds[MUTANT_MESPBOVER].overexpression_factor = 5;
-	mds[MUTANT_MESPBOVER].tests[SEC_POST] = test_MESPBOVER_mutant_post;
-	mds[MUTANT_MESPBOVER].tests[SEC_ANT] = test_MESPBOVER_mutant_ant;
-	mds[MUTANT_MESPBOVER].num_conditions[SEC_POST] = 0;
+	mds[MUTANT_MESPBOVER +loopIdx2].induction = ip.mespb_induction / ip.step_size;
+    mds[MUTANT_MESPBOVER +loopIdx2].recovery = ip.mespb_induction / ip.step_size + (30/sd.step_size);
+    mds[MUTANT_MESPBOVER +loopIdx2].overexpression_rate = RMSMESPB;
+    mds[MUTANT_MESPBOVER +loopIdx2].overexpression_factor = 5;
+	mds[MUTANT_MESPBOVER +loopIdx2].tests[SEC_POST] = test_MESPBOVER_mutant_post;
+	mds[MUTANT_MESPBOVER +loopIdx2].tests[SEC_ANT] = test_MESPBOVER_mutant_ant;
+	mds[MUTANT_MESPBOVER +loopIdx2].num_conditions[SEC_POST] = 0;
 	
-	mds[MUTANT_MESPBOVER].num_conditions[SEC_ANT] = 2;
-	mds[MUTANT_MESPBOVER].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_MESPBOVER].cond_scores[SEC_ANT][1] = CW_A;
-	mds[MUTANT_MESPBOVER].print_con= CMMESPB;
-	mds[MUTANT_MESPBOVER].calc_max_scores();
+	mds[MUTANT_MESPBOVER +loopIdx2].num_conditions[SEC_ANT] = 2;
+	mds[MUTANT_MESPBOVER +loopIdx2].cond_scores[SEC_ANT][0] = CW_A;
+	mds[MUTANT_MESPBOVER +loopIdx2].cond_scores[SEC_ANT][1] = CW_A;
+	mds[MUTANT_MESPBOVER +loopIdx2].print_con= CMMESPB;
+	mds[MUTANT_MESPBOVER +loopIdx2].calc_max_scores();
+
+	}
 	return mds;
 	
 	

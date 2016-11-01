@@ -371,12 +371,14 @@ vector<double> simulate_mutant (int set_num, input_params& ip, sim_data& sd, rat
     	term->verbose() << term->blue << "    Analyzing " << term->reset << "oscillation features . . . ";
     	double score = 0;
     	if (sd.section == SEC_POST) { // Posterior analysis
+			cout<<"mutant feature post: "<<i<<endl;
         	osc_features_post(sd, ip, cls[i], mds[i].feat, wtfeat, mds[i], dirname_cons[i], sd.time_start / sd.big_gran, sd.time_end / sd.big_gran, set_num);
         	term->verbose() << term->blue << "Done" << endl;
     	} else { // Anterior analysis
         	if (ip.ant_features) {
         	    term->verbose() << endl;
         	}
+			cout<<"mutant feature ant: "<<i<<endl;
         	osc_features_ant(sd, ip, wtfeat, dirname_cons[i], cls[i], mds[i], 0, sd.height, 0, 5, set_num);
         	if (ip.ant_features) {
         	    term->verbose() << term->blue << "    Done " << term->reset << "analyzing oscillation features" << endl;
@@ -550,7 +552,7 @@ bool model (input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_d
 
     int time_prev=0;
     for (j = sd.time_start, baby_j = 0; j < sd.time_end; j++, baby_j = WRAP(baby_j + 1, sd.max_delay_size)) {
-        if (j % 100 == 0) {
+        if (j % 10000 == 0) {
 		    cout << "iter " << j << '\n';
         }
 		
@@ -750,7 +752,7 @@ inline bool concentrations_too_high (con_levels& cl, int time, double max_con_th
  */
 void split (sim_data& sd, rates_static& rs, rates_dynamic& rs_d, con_levels& cl, int baby_time, int time) {
     // Calculate the next active start and current width
-	cout<<"spliting..."<<endl;
+	//cout<<"spliting..."<<endl;
     int next_active_start = (sd.active_start + 1) % sd.width_total;
     sd.width_current = MIN(sd.width_current + 1, sd.width_total);
     

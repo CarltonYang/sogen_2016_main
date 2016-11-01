@@ -371,12 +371,14 @@ vector<double> simulate_mutant (int set_num, input_params& ip, sim_data& sd, rat
     	term->verbose() << term->blue << "    Analyzing " << term->reset << "oscillation features . . . ";
     	double score = 0;
     	if (sd.section == SEC_POST) { // Posterior analysis
+			cout<<"mutant feature post: "<<i<<endl;
         	osc_features_post(sd, ip, cls[i], mds[i].feat, wtfeat, mds[i], dirname_cons[i], sd.time_start / sd.big_gran, sd.time_end / sd.big_gran, set_num);
         	term->verbose() << term->blue << "Done" << endl;
     	} else { // Anterior analysis
         	if (ip.ant_features) {
         	    term->verbose() << endl;
         	}
+			cout<<"mutant feature ant: "<<i<<endl;
         	osc_features_ant(sd, ip, wtfeat, dirname_cons[i], cls[i], mds[i], 0, sd.height, 0, 5, set_num);
         	if (ip.ant_features) {
         	    term->verbose() << term->blue << "    Done " << term->reset << "analyzing oscillation features" << endl;
@@ -550,9 +552,9 @@ bool model (input_params& ip, sim_data& sd, rates_static& rs, rates_dynamic rs_d
 
     int time_prev=0;
     for (j = sd.time_start, baby_j = 0; j < sd.time_end; j++, baby_j = WRAP(baby_j + 1, sd.max_delay_size)) {
-        //if (j % 100 == 0) {
-		//    cout << "iter " << j << '\n';
-        //}
+        if (j % 10000 == 0) {
+		    cout << "iter " << j << '\n';
+        }
 		
 		for (int i = 0; i < ip.num_active_mutants; i++) {
 			// only updates base_rates and cell_rates, which are not directly involved in simulation

@@ -70,8 +70,9 @@ int main(int argc, char** argv) {
 	calc_max_delay_size(ip, sd, *rs, sets);
 	mutant_data* mds = create_mutant_data(sd, ip, *rs);
 	sd.initialize_conditions_data(mds);
-	
+
 	// Create the specified output files
+	
 	ofstream* file_passed = create_passed_file(ip);
 	ofstream* file_conditions = create_conditions_file(ip, mds);
 	char** filenames_dirs = create_dirs(ip, sd, mds);
