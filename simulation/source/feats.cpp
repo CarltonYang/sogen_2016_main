@@ -96,10 +96,11 @@ int get_peaks_and_troughs2 (sim_data& sd, con_levels& cl, int actual_cell, int t
 	
 	concentration_level<double>::timespan conc = cl.cons[mr];
 	int compl_count=0;
+	
 	for (int j = time_start + 1; j < sd.time_end - 1 && cl.cons[BIRTH][j][actual_cell] == cl.cons[BIRTH][j - 1][actual_cell] && cl.cons[BIRTH][j][actual_cell] == cl.cons[BIRTH][j + 1][actual_cell]; j++) {
 		// calculate position in the PSM of the cell
         
-        
+  
         mh1_comp[compl_count]=cl.cons[CMH1][j][actual_cell];                 //record concentration value of mh1 151221
         mespa_comp[compl_count]=cl.cons[CMMESPA][j][actual_cell];           //record concentration value of mespa 151221
         mespb_comp[compl_count]=cl.cons[CMMESPB][j][actual_cell];             //record concentration value of mespb 151221
@@ -111,7 +112,7 @@ int get_peaks_and_troughs2 (sim_data& sd, con_levels& cl, int actual_cell, int t
 		} else {
 			pos = cl.active_start_record[j] + sd.width_total - col;
 		}
-	
+		
 		// check if the current point is a peak
 		bool is_peak = true;
 		for (int k = MAX(j - (2 / sd.step_size / sd.big_gran), time_start); k <= MIN(j + 2 / sd.step_size / sd.big_gran, sd.time_end - 1); k++) {
@@ -120,6 +121,7 @@ int get_peaks_and_troughs2 (sim_data& sd, con_levels& cl, int actual_cell, int t
 				
 			}
 		}
+		
 		if (is_peak) {
 			crit_points[num_points] = j;
 			type[num_points] = 1;
@@ -134,6 +136,7 @@ int get_peaks_and_troughs2 (sim_data& sd, con_levels& cl, int actual_cell, int t
 				is_trough = false;
 			}
 		}
+		
 		if (is_trough) {
 			crit_points[num_points] = j;
 			type[num_points] = -1;
@@ -199,7 +202,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 	
 	for (int i = 0; i < 4; i++) {
 		ofstream features_files[NUM_FEATURES]; // Array that will hold the files in which to output the period and amplitude
-	
+		
 		int mr = con[i];
 		int index = ind[i];
 		if (ip.ant_features) {
@@ -214,12 +217,15 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 			features_files[PERIOD] << sd.height << "," << sd.width_total << endl;
 			features_files[AMPLITUDE] << sd.height << "," << sd.width_total << endl;
 		}
+		
 		if (md.index == MUTANT_WILDTYPE && (mr == CMH1 || mr == CMMESPA)) {
+			
             double period_avg = 0;
             int time_start= anterior_time(sd, sd.steps_til_growth + (sd.width_total - sd.width_initial) * sd.steps_split); // time after which the PSM is full of cells
             int num_cells_passed = 0;
             //cout<<"time: " << time_start<< " "<<sd.steps_til_growth + (sd.width_total - sd.width_initial) * sd.steps_split<<" "<< sd.time_end<<endl;
             //cout<<"time:  "<<anterior_time(sd,93000)<<endl;
+			
             for (int col = start_col; col < end_col; col++) {						
                 for (int line = start_line; line < end_line; line++) {
                     int pos = cl.active_start_record[time_start]; // always looking at cell at position active_start because that is the newest cell
@@ -229,10 +235,12 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                     int num_points = 0;
                     if ( mr != CMMESPA) {
                         num_points = get_peaks_and_troughs1(sd, cl, cell, time_start, crit_points, type, position, mr);
+						
                         //cout<<"number of points: "<<num_points<<endl;
                     } else {
                         
                         num_points = get_peaks_and_troughs2(sd, cl, cell, time_start, crit_points, type, position, mr, mh1_comp, mespa_comp, mespb_comp);  // 151221: get_peaks_and_troughs2 records the concentration value of mh1, mespa and mespb and store them in mh1_comp, mespa_comp, mespb_comp
+						
                         comp_score_a+=test_compl(sd, mh1_comp, mespa_comp);
                         comp_score_b+=test_compl(sd, mh1_comp, mespb_comp);
                         //cout<< "num_points: "<< num_points<<endl;
@@ -251,6 +259,8 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                     
                     int pers = 0;
                     int amps = 0;
+	
+					
                     if (num_points >= 3) { 
                         // Calculate all the periods and amplitudes
                         
@@ -293,8 +303,9 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                             num_cells_passed++;
                         }
                         period_avg += (periods[0]);
+						
                     } else {
-                        
+                       
                         period_avg+= (period_avg < INFINITY ? INFINITY : 0);;
                     }
                     // Printing to files for the anterior features
@@ -336,6 +347,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                     crit_points.reset(sd.steps_total / (20/sd.step_size));
                 }		
                 time_start += sd.steps_split / sd.big_gran; // skip in time until a new column of cells has been formed
+				
             }
             if (ip.ant_features) {
                 features_files[PERIOD].close();
@@ -353,9 +365,10 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
             
             if (index == IMH1) {
                 int threshold = 0.7 * (end_line - start_line) * (end_col - start_col); // 151221: originally 80%, now changed to 70%
-                cout<<num_cells_passed<<endl;
+                cout<<"num cells passed cond0:"<<num_cells_passed<<endl;
                 md.conds_passed[SEC_ANT][0] = (num_cells_passed >= threshold);
             }
+			
             if (index == IMMESPA) {
                 md.feat.comp_score_ant_mespa = comp_score_a / num_cell;
                 md.feat.comp_score_ant_mespb = comp_score_b / num_cell;
@@ -366,6 +379,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
             
             //condition wildtype sync score
             if (index == 0) { //only measure her1
+				
                 int time_600 = anterior_time(sd,(600/sd.step_size));
                 int time_600_end = anterior_time(sd,(600+30)/sd.step_size);
                 for (; time_600 < time_600_end; time_600+= 6/sd.step_size){
@@ -399,6 +413,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
             
              
 			if (index == 2 || index ==1){
+				
                 //complementray score of mespa and mespb
                 //for WT calculations
                 int time_600 = anterior_time(sd,(600/sd.step_size));
@@ -441,7 +456,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                 md.feat.amplitude_ant_time[IMDELTA][0]/=5;
                 
             }
-      
+      		//cout<<"mutant: "<< index<<endl;
 		}
 
 		if (md.index==MUTANT_DELTA){
