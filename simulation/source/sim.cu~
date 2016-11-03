@@ -60,11 +60,17 @@ void simulate_all_params (input_params& ip, rates_static& rs, rates_dynamic& rs_
 		baby_cls[i]= con_levels(NUM_CON_LEVELS, sd.max_delay_size, sd.cells_total, sd.active_start); // Concentration levels for simulating (time in this cl is treated cyclically)	
 	}
     
-    
+    cout<<"num_sets: "<<ip.num_sets<<endl;
     // Simulate every parameter set
     for (int i = 0; i < ip.num_sets; i++) {
+		cout<<"set: "<<i<<" "<<score[i]<<endl;
         memcpy(rs_d.rates_base, sets[i], sizeof(double) * NUM_RATES); // Copy the set's rates to the current simulation's rates
-        score[i] = simulate_param_set(i, ip, sd, rs, rs_d, cls, baby_cls, mds, file_passed, file_scores, dirnames_cons, file_features, file_conditions);
+        double temp = simulate_param_set(i, ip, sd, rs, rs_d, cls, baby_cls, mds, file_passed, file_scores, dirnames_cons, file_features, file_conditions);
+		cout<<"set: "<<i<<endl;
+		cout<<score[i]<<endl;
+		cout<<"set: "<<temp<<endl;
+		score[i]=temp;
+		cout<<"after 6"<<endl;
         sets_passed += determine_set_passed(sd, i, score[i]); // Calculate the maximum score and whether the set passed
     }
     
@@ -72,7 +78,7 @@ void simulate_all_params (input_params& ip, rates_static& rs, rates_dynamic& rs_
     if (ip.piping) {
         write_pipe(score, ip, sd);
     }
-    
+    cout<<"after 7"<<endl;
     cout << endl << term->blue << "Done: " << term->reset << sets_passed << "/" << ip.num_sets << " parameter sets passed all conditions" << endl;
 }
 
@@ -134,22 +140,27 @@ double simulate_param_set (int set_num, input_params& ip, sim_data& sd, rates_st
         sd.section = i;
         num_passed += simulate_section(set_num, ip, sd, rs, rs_d, cls, baby_cls, mds, dirnames_cons, scores);
     }
-    
+    cout<<"after 3"<<endl;
     // Calculate the total score
     double total_score = 0;
     for (int i = 0; i < NUM_SECTIONS * ip.num_active_mutants; i++) {
         total_score += scores[i];
     }
-    
+    cout<<"after 4"<<endl;
     // Print the mutant's results (if not short circuiting)
     //if (total_score == sd.max_scores[SEC_POST] + sd.max_scores[SEC_WAVE] + sd.max_scores[SEC_ANT]) {
+	
     if (total_score == sd.max_scores[SEC_POST]  + sd.max_scores[SEC_ANT]) {
         print_passed(ip, file_passed, rs_d);
     }
+	cout<<"after 41"<<endl;
     print_osc_features(ip, file_features, mds, set_num, num_passed);
+	cout<<"after 42"<<endl;
     print_conditions(ip, file_conditions, mds, set_num);
+	cout<<"after 43"<<endl;
     print_scores(ip, file_scores, set_num, scores, total_score);
-    
+    cout<<"after 5"<<endl;
+	cout<<"total_score: "<<total_score<<endl;
     return total_score;
 }
 
@@ -194,7 +205,7 @@ int simulate_section (int set_num, input_params& ip, sim_data& sd, rates_static&
         std::vector<double> current_score(ip.num_active_mutants);
 		current_score = simulate_mutant(set_num, ip, sd, rs, rs_ds, cls, baby_cls, mds, mds[MUTANT_WILDTYPE].feat, dirnames_cons, temp_rates);
 
-
+	 cout<<"after 1"<<endl;
 	 for (int i = 0; i < ip.num_active_mutants; i++) {
         scores[sd.section * ip.num_active_mutants + i] = current_score.at(i);
         baby_cls[i].reset();
@@ -208,7 +219,7 @@ int simulate_section (int set_num, input_params& ip, sim_data& sd, rates_static&
             return num_passed;
         }
     }
-    
+    cout<<"after 2"<<endl;
     return num_passed;
 }
 
@@ -1028,6 +1039,11 @@ __device__ inline void con_dimer (cd_args& a, int con, int offset, cd_indices i)
     + a.sd.step_size * (r[i.rate_association + offset][cell] * c[i.con_protein][tp][cell] * c[i.con_protein + con_offset][tp][cell]
                         - r[i.rate_dissociation + offset][cell] * c[con][tp][cell]
                         - r[i.rate_degradation + offset][cell] * c[con][tp][cell]);
+	double temp = c[con][tc][cell];
+	if (isnan(temp)|| temp!=temp){
+		printf("nan found: temp: %f ",temp );
+		asm("trap;");
+	}
 }
 
 /* mRNA_synthesis calculates the concentrations of every mRNA for a given cell
@@ -1161,11 +1177,28 @@ __device__ void mRNA_synthesis (sim_data& sd, array2D<double>& rs, con_levels& c
         }
         
         //}
-        
+		/*
+        if (isnan(mtrans)|| mtrans!=mtrans){
+			printf("nan found mt: " );
+		}
+
+		double temp1= cl.cons[CMH1 + j][stc.time_prev][stc.cell]
+        + sd.step_size * (mtrans - rs[RMDH1 + j][stc.cell] * cl.cons[CMH1 + j][stc.time_prev][stc.cell]);
+		
+		double temp2= (mtrans - rs[RMDH1 + j][stc.cell] * cl.cons[CMH1 + j][stc.time_prev][stc.cell]);
+		if (isnan(temp1)|| temp1!=temp1){
+			printf("nan found1: " );
+		}
+
+		if (isnan(temp2)|| temp2!=temp2){
+			printf("nan found2: " );
+		}
+		*/
         // The current mRNA concentration's differential equation
         cl.cons[CMH1 + j][stc.time_cur][stc.cell] =
         cl.cons[CMH1 + j][stc.time_prev][stc.cell]
         + sd.step_size * (mtrans - rs[RMDH1 + j][stc.cell] * cl.cons[CMH1 + j][stc.time_prev][stc.cell]);
+		//cout<<cl.cons[CMH1 + j][stc.time_cur][stc.cell]<<endl;
     }
 }
 
@@ -1209,7 +1242,18 @@ __device__ inline double transcription_mespa (array2D<double>& rs, con_levels& c
     th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     tmespbmespb = rs[RCRITPMESPBMESPB][cell] == 0 ? 0 : cl.cons[CPMESPBMESPB][time][cell] / (rs[RCRITPMESPBMESPB][cell]);
     tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : avgpd / (rs[RCRITPDELTA][cell]);
-    
+    if (isnan(th1h1)|| th1h1!=th1h1){
+		printf("nan found: th1h1" );
+	}
+	if (isnan(tmespbmespb)|| tmespbmespb!=tmespbmespb){
+		printf("nan found: tmespbmespb, cl: %f , rs: %f ",cl.cons[CPMESPBMESPB][time][cell],(rs[RCRITPMESPBMESPB][cell]) );
+		asm("trap;");
+	}
+	if (isnan(tdelta)|| tdelta!=tdelta){
+		printf("nan found: tdelta, rs: %f ",rs[RCRITPDELTA][cell] );
+
+	}
+	//double temp= ms * (oe + (tdelta) / (tdelta + rs[NS1][cell] * SQUARE(th1h1)  + SQUARE(tmespbmespb)))
     return ms * (oe + (tdelta) / (tdelta + rs[NS1][cell] * SQUARE(th1h1)  + SQUARE(tmespbmespb)));
 }
 

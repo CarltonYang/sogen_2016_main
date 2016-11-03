@@ -470,6 +470,7 @@ void print_cell_columns (input_params& ip, sim_data& sd, con_levels &cl, char* f
 		TODO Print anterior scores.
 */
 void print_osc_features (input_params& ip, ofstream* file_features, mutant_data mds[], int set_num, int num_passed) {
+	cout<<"after 44"<<endl;
 	if (ip.print_features) { // Print the features only if the user specified it
 		file_features->precision(30);
 		try {
@@ -488,6 +489,7 @@ void print_osc_features (input_params& ip, ofstream* file_features, mutant_data 
 			exit(EXIT_FILE_WRITE_ERROR);
 		}
 	}
+	cout<<"after 45"<<endl;
 }
 
 /* print_conditions prints which conditions each mutant of the given run passed
@@ -502,6 +504,8 @@ void print_osc_features (input_params& ip, ofstream* file_features, mutant_data 
 	todo:
 */
 void print_conditions (input_params& ip, ofstream* file_conditions, mutant_data mds[], int set_num) {
+	cout<<"after 46"<<endl;
+	cout<<" "<< ip.print_conditions<<endl;
 	if (ip.print_conditions) { // Print the conditions only if the user specified it
 		try {
 			*file_conditions << set_num << ",";
@@ -523,6 +527,7 @@ void print_conditions (input_params& ip, ofstream* file_conditions, mutant_data 
 			exit(EXIT_FILE_WRITE_ERROR);
 		}
 	}
+	cout<<"after 47"<<endl;
 }
 
 /* print_scores prints the scores of each mutant run for the given set
@@ -538,6 +543,7 @@ void print_conditions (input_params& ip, ofstream* file_conditions, mutant_data 
 	todo:
 */
 void print_scores (input_params& ip, ofstream* file_scores, int set_num, double scores[], double total_score) {
+	cout<<"after 48"<<endl;
 	if (ip.print_scores) {
 		try {
 			*file_scores << set_num << ",";
@@ -550,6 +556,7 @@ void print_scores (input_params& ip, ofstream* file_scores, int set_num, double 
 			exit(EXIT_FILE_WRITE_ERROR);
 		}
 	}
+	cout<<"after 49"<<endl;
 }
 
 /* close_if_open closes the given output file stream if it is open
