@@ -125,7 +125,7 @@ double simulate_param_set (int set_num, input_params& ip, sim_data& sd, rates_st
     // Prepare for the simulations
     cout << term->blue << "Simulating set " << term->reset << set_num << " . . ." << endl;
     int num_passed = 0;
-    double scores[NUM_SECTIONS * NUM_MUTANTS] = {0};
+    double scores[NUM_SECTIONS * NUM_MUTANTS *3] = {0};
     if (!ip.reset_seed) { // Reset the seed for each set if specified by the user
         init_seeds(ip, set_num, set_num > 0, true);
     }
@@ -947,6 +947,14 @@ __device__ inline void con_protein_her (cp_args& a, cph_indices i) {
     int tp = a.stc.time_prev;
     int td = WRAP(tc - delay_steps, a.sd.max_delay_size);
     
+
+    double temp4=  c[i.con_mrna][td][a.old_cells[i.old_cell]];
+    
+	if (isnan(temp4)|| temp4!=temp4){
+		//c[i.con_mrna][td][a.old_cells[i.old_cell]]=0;
+		//printf("nan found: temp4: %f; i.con_mrna %d; td: %d; a.old_cells[i.old_cell]: %d",temp4, i.con_mrna,td, a.old_cells[i.old_cell] );
+		//asm("trap;");
+	}
     // The part of the given Her protein concentration's differential equation that accounts for everything but heterodimers, whose influence is calculated in dim_int
     c[i.con_protein][tc][cell] =
     c[i.con_protein][tp][cell]
@@ -956,6 +964,8 @@ __device__ inline void con_protein_her (cp_args& a, cph_indices i) {
      - 2 * r[i.rate_association][cell] * SQUARE(c[i.con_protein][tp][cell])
      + 2 * r[i.rate_dissociation][cell] * c[i.con_dimer][tp][cell]
      + a.dimer_effects[i.dimer_effect]);
+	
+	
 }
 
 /* con_protein_delta calculates the protein concentration of the given Delta gene
@@ -980,6 +990,7 @@ __device__ inline void con_protein_delta (cp_args& a, cpd_indices i) {
     c[i.con_protein][tp][cell]
     + a.sd.step_size * (r[i.rate_synthesis][cell] * c[i.con_mrna][td][a.old_cells[i.old_cell]]
                         - r[i.rate_degradation][cell] * c[i.con_protein][tp][cell]);
+	
 }
 
 /* dimer_proteins calculates the concentrations of every dimer for a given cell
@@ -1039,11 +1050,30 @@ __device__ inline void con_dimer (cd_args& a, int con, int offset, cd_indices i)
     + a.sd.step_size * (r[i.rate_association + offset][cell] * c[i.con_protein][tp][cell] * c[i.con_protein + con_offset][tp][cell]
                         - r[i.rate_dissociation + offset][cell] * c[con][tp][cell]
                         - r[i.rate_degradation + offset][cell] * c[con][tp][cell]);
-	double temp = c[con][tc][cell];
-	if (isnan(temp)|| temp!=temp){
-		printf("nan found: temp: %f ",temp );
+	double temp1 = c[con][tp][cell];
+	double temp2 = r[i.rate_association + offset][cell];
+	double temp3 = c[i.con_protein][tp][cell] ;
+	double temp4 = c[i.con_protein + con_offset][tp][cell];
+	/*
+	if (isnan(temp1)|| temp1!=temp1){
+		printf("nan found: temp1: %f ",temp1 );
 		asm("trap;");
 	}
+	
+	if (isnan(temp2)|| temp2!=temp2){
+		printf("nan found: temp2: %f ",temp2 );
+		asm("trap;");
+	}
+	
+	if (isnan(temp4)|| temp4!=temp4){
+		printf("nan found: temp4: %f ",temp4 );
+		asm("trap;");
+	}
+	
+	if (isnan(temp3)|| temp3!=temp3){
+		printf("nan found: temp3: %f ",temp3 );
+		asm("trap;");
+	}*/
 }
 
 /* mRNA_synthesis calculates the concentrations of every mRNA for a given cell
@@ -1179,7 +1209,8 @@ __device__ void mRNA_synthesis (sim_data& sd, array2D<double>& rs, con_levels& c
         //}
 		/*
         if (isnan(mtrans)|| mtrans!=mtrans){
-			printf("nan found mt: " );
+			printf("nan found mt; in %d;", j );
+			asm("trap;");
 		}
 
 		double temp1= cl.cons[CMH1 + j][stc.time_prev][stc.cell]
@@ -1188,10 +1219,12 @@ __device__ void mRNA_synthesis (sim_data& sd, array2D<double>& rs, con_levels& c
 		double temp2= (mtrans - rs[RMDH1 + j][stc.cell] * cl.cons[CMH1 + j][stc.time_prev][stc.cell]);
 		if (isnan(temp1)|| temp1!=temp1){
 			printf("nan found1: " );
+			asm("trap;");
 		}
 
 		if (isnan(temp2)|| temp2!=temp2){
 			printf("nan found2: " );
+			asm("trap;");
 		}
 		*/
         // The current mRNA concentration's differential equation
@@ -1242,8 +1275,10 @@ __device__ inline double transcription_mespa (array2D<double>& rs, con_levels& c
     th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     tmespbmespb = rs[RCRITPMESPBMESPB][cell] == 0 ? 0 : cl.cons[CPMESPBMESPB][time][cell] / (rs[RCRITPMESPBMESPB][cell]);
     tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : avgpd / (rs[RCRITPDELTA][cell]);
+	/*
     if (isnan(th1h1)|| th1h1!=th1h1){
 		printf("nan found: th1h1" );
+		asm("trap;");
 	}
 	if (isnan(tmespbmespb)|| tmespbmespb!=tmespbmespb){
 		printf("nan found: tmespbmespb, cl: %f , rs: %f ",cl.cons[CPMESPBMESPB][time][cell],(rs[RCRITPMESPBMESPB][cell]) );
@@ -1251,7 +1286,13 @@ __device__ inline double transcription_mespa (array2D<double>& rs, con_levels& c
 	}
 	if (isnan(tdelta)|| tdelta!=tdelta){
 		printf("nan found: tdelta, rs: %f ",rs[RCRITPDELTA][cell] );
-
+		asm("trap;");
+	}*/
+	double tempxx=ms * (oe + (tdelta) / (tdelta + rs[NS1][cell] * SQUARE(th1h1)  + SQUARE(tmespbmespb)));
+	if(isnan(tempxx)|| tempxx!=tempxx){
+		return 0;
+		//printf("nan found: tempxx: %f; th1h1: %f; tmespbmepsb: %f; tdelta: %f",tempxx, th1h1, tmespbmespb, tdelta );
+		//asm("trap;");
 	}
 	//double temp= ms * (oe + (tdelta) / (tdelta + rs[NS1][cell] * SQUARE(th1h1)  + SQUARE(tmespbmespb)))
     return ms * (oe + (tdelta) / (tdelta + rs[NS1][cell] * SQUARE(th1h1)  + SQUARE(tmespbmespb)));
@@ -1281,12 +1322,24 @@ __device__ inline double transcription_mespb (array2D<double>& rs, con_levels& c
     tmespbmespb = rs[RCRITPMESPBMESPB][cell] == 0 ? 0 : cl.cons[CPMESPBMESPB][time][cell] / (rs[RCRITPMESPBMESPB][cell]);
     //}
     tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : rs[NS2][cell] * avgpd / (rs[RCRITPDELTA][cell]);
-    //avg_delta+= tdelta;
-    //avg_rest+=(SQUARE(tmespamespa) + SQUARE(tmespbmespb));
-    //cout<<"Tdelta: "<< tdelta<<" REST: "<<(SQUARE(tmespamespa) + SQUARE(tmespamespb) + SQUARE(tmespbmespb))<<endl;
-    //cout<<"OE in mespbover: "<<oe<<endl;
-    
-    //+ SQUARE(tmespamespb)
+	/*
+	if (isnan(tmespamespa)|| tmespamespa!=tmespamespa){
+		printf("nan found: tmespamespa, cl: %f , rs: %f ",cl.cons[CPMESPAMESPA][time][cell],(rs[RCRITPMESPAMESPA][cell]) );
+		asm("trap;");
+	}
+
+    if (isnan(tmespamespb)|| tmespamespb!=tmespamespb){
+		printf("nan found: tmespamespa, cl: %f , rs: %f ",cl.cons[CPMESPAMESPB][time][cell],(rs[RCRITPMESPAMESPB][cell]) );
+		asm("trap;");
+	}
+	if (isnan(tmespbmespb)|| tmespbmespb!=tmespbmespb){
+		printf("nan found: tmespbmespb, cl: %f , rs: %f ",cl.cons[CPMESPBMESPB][time][cell],(rs[RCRITPMESPBMESPB][cell]) );
+		asm("trap;");
+	}
+	if (isnan(tdelta)|| tdelta!=tdelta){
+		printf("nan found: tdelta, rs: %f ",rs[RCRITPDELTA][cell] );
+
+	}*/
     return ms * (oe + (1 + tdelta) / (1 + tdelta + SQUARE(tmespamespa) + SQUARE(tmespamespb)+SQUARE(tmespbmespb)));
 }
 

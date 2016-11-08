@@ -294,7 +294,7 @@ void accept_input_params (int num_args, char** args, input_params& ip) {
 			} else if (option_set(option, "-M", "--mutants")) {
 				ensure_nonempty(option, value);
 				ip.num_active_mutants = atoi(value);
-				ip.num_active_mutants = ip.num_active_mutants * 2;
+				ip.num_active_mutants = ip.num_active_mutants * 3;
 				/*if (ip.num_active_mutants < 1 || ip.num_active_mutants > NUM_MUTANTS) {
 					int strlen_num = INT_STRLEN(NUM_MUTANTS);
 					char* message = new char[(strlen("The number of mutants to run must be a positive integer up to the number of coded-in mutants. Set -M or --mutants to be at least 1 and no more than .") + strlen_num + 1)];
