@@ -525,19 +525,28 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 				}
                 md.feat.amplitude_ant_time[IMMESPB][0]/=5;
                 //cout<<"MUTANT MESPA: "<<md.feat.amplitude_ant_time[IMMESPB][0]<<endl;
+                
+                /*
+                int time_720 = anterior_time(sd, (720)/sd.step_size);
+                int time_720_end = anterior_time(sd, (750)/sd.step_size);
+                for (;time_720<time_720_end; time_720+=(6/sd.step_size)){
+                    md.feat.sync_score_ant[IMMESPB]+= ant_sync(sd, cl, CMMESPB, time_720);
+                }
+                md.feat.sync_score_ant[IMMESPB]/=5;
+                 */
 			}
 		}
 		
 		if (md.index==MUTANT_MESPBOVER){                    //calculate oscillation features for mespb mutant, including posterior amplitude, anterior amplitude and syncrony score for different species
 			if (index==2 ){
-                int time_660 = anterior_time(sd, (660)/sd.step_size);         //one hour after induction, 10 snapshot in 30 minutes
-                int time_660_end = anterior_time(sd, (690)/sd.step_size);
-                for (;time_660<time_660_end; time_660+=(6/sd.step_size)){
-                    md.feat.amplitude_ant_time[IMMESPA][0]+= amp_10(sd, cl, CMMESPA, time_660);
-                    md.feat.amplitude_ant_time[IMMESPB][0]+= amp_10(sd, cl, CMMESPB, time_660);
+                int time_690 = anterior_time(sd, (660)/sd.step_size);         //one hour after induction, 10 snapshot in 30 minutes
+                int time_690_end = anterior_time(sd, (690)/sd.step_size);
+                for (;time_690<time_690_end; time_690+=(6/sd.step_size)){
+                    //md.feat.amplitude_ant_time[IMMESPA][0]+= amp_10(sd, cl, CMMESPA, time_690);
+                    md.feat.amplitude_ant_time[IMMESPB][0]+= amp_10(sd, cl, CMMESPB, time_690);
                 }
                 md.feat.amplitude_ant_time[IMMESPB][0]/=5;
-                md.feat.amplitude_ant_time[IMMESPA][0]/=5;
+                //md.feat.amplitude_ant_time[IMMESPA][0]/=5;
                 //cout<<"MUTANT MESPB: "<<md.feat.amplitude_ant_time[IMMESPB][0]<<endl;
                 //cout<<"MUTANT MESPB: "<<md.feat.amplitude_ant_time[IMMESPA][0]<<endl;
 			}

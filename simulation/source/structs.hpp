@@ -287,9 +287,9 @@ struct rates {
 	
 	~rates () {
 		for (int i = 0; i < NUM_RATES; i++) {
-			delete[] this->factors_gradient[i];
-			delete[] this->rates_cell[i];
-			delete[] this->rates_active[i];
+            if(factors_gradient[i]) {delete[] this->factors_gradient[i];}
+            if(rates_cell[i]) {delete[] this->rates_cell[i];}
+            if(rates_active[i]) {delete[] this->rates_active[i];}
 		}
 	}
 };

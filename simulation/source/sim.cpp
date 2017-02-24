@@ -51,16 +51,21 @@ void simulate_all_params (input_params& ip, rates& rs, sim_data& sd, double** se
     
     // Initialize the concentration levels structs
     int max_cl_size = MAX(sd.steps_til_growth, sd.max_delay_size + sd.steps_total - sd.steps_til_growth) / sd.big_gran + 1;
+    cout<<"Max cl size: "<< max_cl_size<<endl;
+    cout<<"Max delay size: "<<sd.max_delay_size<<endl;
     con_levels cl(NUM_CON_STORE, max_cl_size, sd.cells_total, sd.active_start); // Concentration levels for analysis and storage
     con_levels baby_cl(NUM_CON_LEVELS, sd.max_delay_size, sd.cells_total, sd.active_start); // Concentration levels for simulating (time in this cl is treated cyclically)
     
     // Simulate every parameter set
     for (int i = 0; i < ip.num_sets; i++) {
         memcpy(rs.rates_base, sets[i], sizeof(double) * NUM_RATES); // Copy the set's rates to the current simulation's rates
-        mds[MUTANT_HER1OVER].overexpression_factor=rs.rates_base[OEHER];
-        mds[MUTANT_MESPAOVER].overexpression_factor=rs.rates_base[OEMESPA];
-        mds[MUTANT_MESPBOVER].overexpression_factor=rs.rates_base[OEMESPB];
-        score[i] = simulate_param_set(i, ip, sd, rs, cl, baby_cl, mds, file_passed, file_scores, dirnames_cons, file_features, file_conditions);
+        double overfactor[3]={0};
+        overfactor[0]=rs.rates_base[OEHER];
+        overfactor[1]=rs.rates_base[OEMESPA];
+        overfactor[2]=rs.rates_base[OEMESPB];
+        cout<<"RATES: "<<rs.rates_base[OEHER]<<" "<<rs.rates_base[OEMESPA]<<" "<<rs.rates_base[OEMESPB]<<endl;
+        //cout<<"UPDATED OE: HER1: "<<mds[MUTANT_HER1OVER].overexpression_factor<<"; MESPA: "<<mds[MUTANT_MESPAOVER].overexpression_factor<<"; MESPB: "<<mds[MUTANT_MESPBOVER].overexpression_factor<<endl;
+        score[i] = simulate_param_set(i, ip, sd, rs, cl, baby_cl, mds, file_passed, file_scores, dirnames_cons, file_features, file_conditions,overfactor);
         sets_passed += determine_set_passed(sd, i, score[i]); // Calculate the maximum score and whether the set passed
     }
     
@@ -111,7 +116,7 @@ bool determine_set_passed (sim_data& sd, int set_num, double score) {
 	notes:
 	todo:
  */
-double simulate_param_set (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data mds[], ofstream* file_passed, ofstream* file_scores, char** dirnames_cons, ofstream* file_features, ofstream* file_conditions) {
+double simulate_param_set (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data mds[], ofstream* file_passed, ofstream* file_scores, char** dirnames_cons, ofstream* file_features, ofstream* file_conditions, double overfactor[]) {
     // Prepare for the simulations
     cout << term->blue << "Simulating set " << term->reset << set_num << " . . ." << endl;
     int num_passed = 0;
@@ -126,7 +131,7 @@ double simulate_param_set (int set_num, input_params& ip, sim_data& sd, rates& r
     int end_section = SEC_ANT * !(sd.no_growth);
     for (int i = SEC_POST; i <= end_section; i++) {
         sd.section = i;
-        num_passed += simulate_section(set_num, ip, sd, rs, cl, baby_cl, mds, dirnames_cons, scores);
+        num_passed += simulate_section(set_num, ip, sd, rs, cl, baby_cl, mds, dirnames_cons, scores,overfactor);
     }
     
     // Calculate the total score
@@ -162,7 +167,7 @@ double simulate_param_set (int set_num, input_params& ip, sim_data& sd, rates& r
 	notes:
 	todo:
  */
-int simulate_section (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data mds[], char** dirnames_cons, double scores[]) {
+int simulate_section (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data mds[], char** dirnames_cons, double scores[],double overfactor[]) {
     // Prepare for this section's simulations
     int num_passed = 0;
     double temp_rates[2]; // Array of knockout rates so knockouts can be quickly applied and reverted
@@ -174,7 +179,10 @@ int simulate_section (int set_num, input_params& ip, sim_data& sd, rates& rs, co
         mutant_sim_message(mds[i], i);
         store_original_rates(rs, mds[i], temp_rates); // will be used to revert original rates after current mutant
         knockout (rs, mds[i], 0);
-        double current_score = simulate_mutant(set_num, ip, sd, rs, cl, baby_cl, mds[i], mds[MUTANT_WILDTYPE].feat, dirnames_cons[i], temp_rates);
+        
+        
+        
+        double current_score = simulate_mutant(set_num, ip, sd, rs, cl, baby_cl, mds[i], mds[MUTANT_WILDTYPE].feat, dirnames_cons[i], temp_rates, overfactor);
         scores[sd.section * ip.num_active_mutants + i] = current_score;
         baby_cl.reset();
         revert_knockout(rs, mds[i], temp_rates); // this should still happen at the end
@@ -316,7 +324,7 @@ inline void revert_knockout (rates& rs, mutant_data& md, double orig_rates[]) {
 	todo:
  TODO Break up this enormous function.
  */
-double simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data& md, features& wtfeat, char* dirname_cons, double temp_rates[2]) {
+double simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data& md, features& wtfeat, char* dirname_cons, double temp_rates[2],double overfactor[]) {
     reset_seed(ip, sd); // Reset the seed for each mutant
     baby_cl.reset(); // Reset the concentrations levels used for simulating
     perturb_rates_all(rs); // Perturb the rates of all starting cells
@@ -335,7 +343,7 @@ double simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates& rs, 
     }
     
     // Simulate the mutant
-    bool passed = model(sd, rs, cl, baby_cl, md, temp_rates);
+    bool passed = model(sd, rs, cl, baby_cl, md, temp_rates, overfactor);
     
     // Analyze the simulation's oscillation features
     term->verbose() << term->blue << "    Analyzing " << term->reset << "oscillation features . . . ";
@@ -413,7 +421,7 @@ double simulate_mutant (int set_num, input_params& ip, sim_data& sd, rates& rs, 
 	notes:
 	todo:
  */
-bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data& md, double temp_rates[2]) {
+bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant_data& md, double temp_rates[2], double overfactor[]) {
     int steps_elapsed = sd.steps_split; // Used to determine when to split a column of cells
     update_rates(rs, sd.active_start); // Update the active rates based on the base rates, perturbations, and gradients
     
@@ -454,7 +462,7 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
                 st_context stc(time_prev, baby_j, k);
                 protein_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_protein);
                 dimer_proteins(sd, rs.rates_active, baby_cl, stc);
-                mRNA_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_mrna, md, past_induction, past_recovery);
+                mRNA_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_mrna, md, past_induction, past_recovery,overfactor);
             }
         }
         /*
@@ -887,7 +895,7 @@ inline void con_dimer (cd_args& a, int con, int offset, cd_indices i) {
  
 	151221: Added mRNA transcription for meps genes, pay attention to index of mesp genes
  */
-void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc, int old_cells_mrna[], mutant_data& md, bool past_induction, bool past_recovery ) {
+void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc, int old_cells_mrna[], mutant_data& md, bool past_induction, bool past_recovery, double overfactor[] ) {
     // Translate delays from minutes to time steps
     int delays[NUM_INDICES];
     for (int j = 0; j < NUM_INDICES; j++) {
@@ -976,13 +984,21 @@ void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc,
          //cout<<md.overexpression_factor<<endl;
          }
          */
+        int OE_index=0;
+        if (md.index==MUTANT_MESPAOVER){
+            OE_index=1;}
+        else if (md.index==MUTANT_MESPBOVER){
+            OE_index=2;
+        }
+        
         
         if (j==md.overexpression_rate){
             //cout<< md.overexpression_rate<<endl;
             if (past_induction) {
                 //cout<<"PAST"<<endl;
                 if (!past_recovery) {
-                    oe = md.overexpression_factor;
+                    
+                    oe = overfactor[OE_index];
                     //cout<< oe<<endl;
                 }
             }
@@ -993,10 +1009,15 @@ void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc,
             mtrans = transcription_mespa(rs, cl, WRAP(stc.time_cur - delays[j], sd.max_delay_size), old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe, sd.section);
             //cout<<"mespa"<<mtrans<<endl;
         } else if (j == IMMESPB && sd.section == SEC_ANT) {
-            mtrans = transcription_mespb(rs, cl, WRAP(stc.time_cur - delays[j], sd.max_delay_size), old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe);
+            int mdelta =0;
+            mdelta = rs[NS1][old_cells_mrna[IMH1 + j]]/ sd.step_size;
+            //mdelta = rs[NS1][cell];
+            int time_mdelta =WRAP(stc.time_cur - delays[j] - mdelta, sd.max_delay_size);
+            mtrans = transcription_mespb(rs, cl, time_mdelta, old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe);
             
         } else {
-            mtrans = transcription(rs, cl, WRAP(stc.time_cur - delays[j], sd.max_delay_size), old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe);
+            
+            mtrans = transcription(rs, cl, WRAP(stc.time_cur - delays[j], sd.max_delay_size) , old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe);
         }
         
         //}
@@ -1044,12 +1065,13 @@ inline double transcription (double** rs, con_levels& cl, int time, int cell, do
  TODO clean up these parameters
  */
 inline double transcription_mespa (double** rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe, int section) {
-    double th1h1,  tmespbmespb = 0, tdelta;
+    double th1h1 = 0, tdelta;
     th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
-    tmespbmespb = rs[RCRITPMESPBMESPB][cell] == 0 ? 0 : cl.cons[CPMESPBMESPB][time][cell] / (rs[RCRITPMESPBMESPB][cell]);
+    //tmespbmespb = rs[RCRITPMESPBMESPB][cell] == 0 ? 0 : cl.cons[CPMESPBMESPB][time][cell] / (rs[RCRITPMESPBMESPB][cell]);
     tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : avgpd / (rs[RCRITPDELTA][cell]);
     
-    return ms * (oe + (tdelta) / (tdelta + rs[NS1][cell] * SQUARE(th1h1)  + SQUARE(tmespbmespb)));
+    //return ms * (oe + (tdelta) / (tdelta + rs[NS1][cell] * SQUARE(th1h1)  + SQUARE(tmespbmespb)));
+    return ms * (oe + (tdelta) / (1+ tdelta +  SQUARE(th1h1) ));
 }
 
 /* 151221: transcription_mespb calculates mRNA transcription for mespb, taking into account the effects of dimer repression
@@ -1067,22 +1089,27 @@ inline double transcription_mespa (double** rs, con_levels& cl, int time, int ce
  TODO clean up these parameters
  */
 inline double transcription_mespb (double** rs, con_levels& cl, int time, int cell, double avgpd, double ms, double oe) {
-    double tmespamespa = 0, tmespamespb = 0, tmespbmespb = 0, tdelta;
+    double tmespamespa = 0,tmespbmespb = 0, tdelta;
     //th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     //th7h13 = rs[RCRITPH7H13][cell] == 0 ? 0 : cl.cons[CPH7H13][time][cell] / rs[RCRITPH7H13][cell];
     //if (section == SEC_ANT) {
+    //mdelta = rs[NS1][cell];
+    //time = WRAP(time - mdelta, sd.max_delay_size)
     tmespamespa = rs[RCRITPMESPAMESPA][cell] == 0 ? 0 : cl.cons[CPMESPAMESPA][time][cell] / (rs[RCRITPMESPAMESPA][cell]);
-    tmespamespb = rs[RCRITPMESPAMESPB][cell] == 0 ? 0 : cl.cons[CPMESPAMESPB][time][cell] / (rs[RCRITPMESPAMESPB][cell]);
+    //tmespamespb = rs[RCRITPMESPAMESPB][cell] == 0 ? 0 : cl.cons[CPMESPAMESPB][time][cell] / (rs[RCRITPMESPAMESPB][cell]);
     tmespbmespb = rs[RCRITPMESPBMESPB][cell] == 0 ? 0 : cl.cons[CPMESPBMESPB][time][cell] / (rs[RCRITPMESPBMESPB][cell]);
     //}
-    tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : rs[NS2][cell] * avgpd / (rs[RCRITPDELTA][cell]);
+    //tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : rs[NS2][cell] * avgpd / (rs[RCRITPDELTA][cell]);
+    tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 :  avgpd / (rs[RCRITPDELTA][cell]);
+    
     //avg_delta+= tdelta;
     //avg_rest+=(SQUARE(tmespamespa) + SQUARE(tmespbmespb));
     //cout<<"Tdelta: "<< tdelta<<" REST: "<<(SQUARE(tmespamespa) + SQUARE(tmespamespb) + SQUARE(tmespbmespb))<<endl;
     //cout<<"OE in mespbover: "<<oe<<endl;
     
     //+ SQUARE(tmespamespb)
-    return ms * (oe + (1 + tdelta) / (1 + tdelta + SQUARE(tmespamespa) + SQUARE(tmespamespb)+SQUARE(tmespbmespb)));
+    //return ms * (oe + (1 + tdelta) / (1 + tdelta + SQUARE(tmespamespa) + SQUARE(tmespamespb)+SQUARE(tmespbmespb)));
+    return ms * (oe + (1 + tdelta) / (1 + tdelta + SQUARE(tmespamespa) +SQUARE(tmespbmespb)));
 }
 
 /* calc_neighbors_1d calculates a given cell's neighbors in a 1D simulation

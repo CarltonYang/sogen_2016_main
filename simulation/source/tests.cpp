@@ -42,10 +42,10 @@ double test_wildtype_ant (mutant_data& md, features& wtfeat) {
     //cout<<"sync_score_ant: "<< md.feat.sync_score_ant[IMH1]<<endl;
     cout<<"WILD 1: "<<md.conds_passed[SEC_ANT][1]<<"; "<< md.feat.sync_score_ant[IMH1]<<endl;
     
-    md.conds_passed[SEC_ANT][4] = md.feat.comp_score_ant_mespa<= -0.7 ? 1 : (1 - (md.feat.comp_score_ant_mespa + .7));
-    md.conds_passed[SEC_ANT][5] = md.feat.comp_score_ant_mespb<= -0.7 ? 1 : (1 - (md.feat.comp_score_ant_mespb + .7));
-    md.conds_passed[SEC_ANT][6] = md.feat.sync_score_ant[1] <= -0.7 ? 1 : (1 - (md.feat.sync_score_ant[1] +.7 ));
-    md.conds_passed[SEC_ANT][7] = md.feat.sync_score_ant[2] <= -0.7 ? 1 : (1 - (md.feat.sync_score_ant[2] + .7));
+    md.conds_passed[SEC_ANT][4] = (md.feat.comp_score_ant_mespa<= -0.7 && md.feat.comp_score_ant_mespa>= -1) ? 1 : (1 - (md.feat.comp_score_ant_mespa + .7));
+    md.conds_passed[SEC_ANT][5] = (md.feat.comp_score_ant_mespb<= -0.7 && md.feat.comp_score_ant_mespb>= -1) ? 1 : (1 - (md.feat.comp_score_ant_mespb + .7));
+    md.conds_passed[SEC_ANT][6] = (md.feat.sync_score_ant[1] <= -0.7 && md.feat.sync_score_ant[1]>= -1) ? 1 : (1 - (md.feat.sync_score_ant[1] +.7 ));
+    md.conds_passed[SEC_ANT][7] = (md.feat.sync_score_ant[2] <= -0.7 && md.feat.sync_score_ant[2]>= -1) ? 1 : (1 - (md.feat.sync_score_ant[2] + .7));
     cout<<"WILD 10a: "<<md.conds_passed[SEC_ANT][4]<<"; "<< md.feat.comp_score_ant_mespa<<endl;
     cout<<"WILD 10b: "<<md.conds_passed[SEC_ANT][5]<<"; "<<md.feat.comp_score_ant_mespb<<endl;
     cout<<"WILD 10c: "<<md.conds_passed[SEC_ANT][6]<<"; "<<md.feat.sync_score_ant[1]<<endl;
@@ -118,7 +118,7 @@ double test_DAPT_mutant_ant (mutant_data& md, features& wtfeat) {
     md.conds_passed[SEC_ANT][0] = md.feat.sync_score_ant[IMH1] < 0.7;
     cout<<"DAPT 1: " <<md.conds_passed[SEC_ANT][0]<<"; "<<md.feat.sync_score_ant[IMH1]<<endl;
     
-    md.conds_passed[SEC_ANT][1] = md.feat.amplitude_ant_time[IMH1][2] /  wtfeat.amplitude_ant_time[IMH1][2] < 0.85;
+    md.conds_passed[SEC_ANT][1] = ((md.feat.amplitude_ant_time[IMH1][2] /  wtfeat.amplitude_ant_time[IMH1][2]) < 0.85 && (md.feat.amplitude_ant_time[IMH1][2] /  wtfeat.amplitude_ant_time[IMH1][2])> 0.3);
     cout<<"DAPT 2: " <<md.conds_passed[SEC_ANT][1]<<"; "<<md.feat.amplitude_ant_time[IMH1][2]<<" "<< wtfeat.amplitude_ant_time[IMH1][2]<<" "<<md.feat.amplitude_ant_time[IMH1][2] / wtfeat.amplitude_ant_time[IMH1][2]<<endl;
 
     
@@ -165,18 +165,23 @@ double test_her1over_mutant_ant (mutant_data& md, features& wtfeat) {
 double test_MESPAOVER_mutant_ant (mutant_data& md, features& wtfeat) {
     md.conds_passed[SEC_ANT][0] = (md.feat.amplitude_ant_time[IMMESPB][0] / wtfeat.amplitude_ant_time[IMMESPB][0]) <= AMP_SAT ? 1 : (1- ((md.feat.amplitude_ant_time[IMMESPB][0] / wtfeat.amplitude_ant_time[IMMESPB][0])-AMP_SAT));
     
-    cout<<"MESPA: "<<md.conds_passed[SEC_ANT][0]<<"; "<<md.feat.amplitude_ant_time[IMMESPB][0] << " "<< wtfeat.amplitude_ant_time[IMMESPB][0]<<" "<< md.feat.amplitude_ant_time[IMMESPB][0] / wtfeat.amplitude_ant_time[IMMESPB][0]<<endl;
+    cout<<"MESPA 1: "<<md.conds_passed[SEC_ANT][0]<<"; "<<md.feat.amplitude_ant_time[IMMESPB][0] << " "<< wtfeat.amplitude_ant_time[IMMESPB][0]<<" "<< md.feat.amplitude_ant_time[IMMESPB][0] / wtfeat.amplitude_ant_time[IMMESPB][0]<<endl;
+    
+    
+    //md.conds_passed[SEC_ANT][1]= (md.feat.sync_score_ant[IMMESPB]) <= 0.7 ? 1 : (1- (md.feat.sync_score_ant[IMMESPB]-.7));
+    //cout<<"MESPA 2: "<<md.conds_passed[SEC_ANT][1]<<"; "<<md.feat.sync_score_ant[IMMESPB]<<endl;
+    
     return isnan(md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0])? 0: (md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]);
 }
 
 double test_MESPBOVER_mutant_ant (mutant_data& md, features& wtfeat) {
-    md.conds_passed[SEC_ANT][0] = (md.feat.amplitude_ant_time[IMMESPA][0] / wtfeat.amplitude_ant_time[IMMESPA][0]) <= AMP_SAT ? 1 : (1- ((md.feat.amplitude_ant_time[IMMESPA][0] / wtfeat.amplitude_ant_time[IMMESPA][0])-AMP_SAT));
-    md.conds_passed[SEC_ANT][1] = (md.feat.amplitude_ant_time[IMMESPB][0] / wtfeat.amplitude_ant_time[IMMESPB][0]) <= AMP_SAT ? 1 : (1- ((md.feat.amplitude_ant_time[IMMESPB][0] / wtfeat.amplitude_ant_time[IMMESPB][0])-AMP_SAT));
+    //md.conds_passed[SEC_ANT][0] = (md.feat.amplitude_ant_time[IMMESPA][0] / wtfeat.amplitude_ant_time[IMMESPA][0]) <= AMP_SAT ? 1 : (1- ((md.feat.amplitude_ant_time[IMMESPA][0] / wtfeat.amplitude_ant_time[IMMESPA][0])-AMP_SAT));
+    md.conds_passed[SEC_ANT][0] = (md.feat.amplitude_ant_time[IMMESPB][0] / wtfeat.amplitude_ant_time[IMMESPB][0]) <= AMP_SAT ? 1 : (1- ((md.feat.amplitude_ant_time[IMMESPB][0] / wtfeat.amplitude_ant_time[IMMESPB][0])-AMP_SAT));
     
     
-    cout<<"MESPB 1: "<<md.conds_passed[SEC_ANT][1]<<"; "<<md.feat.amplitude_ant_time[IMMESPB][0] << " "<< wtfeat.amplitude_ant_time[IMMESPB][0]<<" "<< md.feat.amplitude_ant_time[IMMESPB][0] / wtfeat.amplitude_ant_time[IMMESPB][0]<<endl;
-    cout<<"MESPB 2: "<<md.conds_passed[SEC_ANT][0]<<"; "<<md.feat.amplitude_ant_time[IMMESPA][0] << " "<< wtfeat.amplitude_ant_time[IMMESPA][0]<<" "<< md.feat.amplitude_ant_time[IMMESPA][0] / wtfeat.amplitude_ant_time[IMMESPA][0]<<endl;
-    return isnan((md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]) + (md.conds_passed[SEC_ANT][1] * md.cond_scores[SEC_ANT][1])) ? 0 : (md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]) + (md.conds_passed[SEC_ANT][1] * md.cond_scores[SEC_ANT][1]);
+    //cout<<"MESPB 1: "<<md.conds_passed[SEC_ANT][1]<<"; "<<md.feat.amplitude_ant_time[IMMESPB][0] << " "<< wtfeat.amplitude_ant_time[IMMESPB][0]<<" "<< md.feat.amplitude_ant_time[IMMESPB][0] / wtfeat.amplitude_ant_time[IMMESPB][0]<<endl;
+    cout<<"MESPB: "<<md.conds_passed[SEC_ANT][0]<<"; "<<md.feat.amplitude_ant_time[IMMESPB][0] << " "<< wtfeat.amplitude_ant_time[IMMESPB][0]<<" "<< md.feat.amplitude_ant_time[IMMESPB][0] / wtfeat.amplitude_ant_time[IMMESPB][0]<<endl;
+    return isnan((md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]) + (md.conds_passed[SEC_ANT][1] * md.cond_scores[SEC_ANT][1])) ? 0 : (md.conds_passed[SEC_ANT][1] * md.cond_scores[SEC_ANT][1]);
 }
 
 double test_her1over_mutant_post (mutant_data& md, features& wtfeat) {
