@@ -238,7 +238,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                         //cout<< "num_points: "<< num_points<<endl;
 
                     } 
-                                    double periods[num_points];
+                    double periods[num_points];
                     double per_pos[num_points];
                     double per_time[num_points];
                     double amplitudes[num_points];

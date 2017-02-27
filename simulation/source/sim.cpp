@@ -1047,7 +1047,8 @@ inline double transcription (double** rs, con_levels& cl, int time, int cell, do
     double th1h1= 0, tdelta;
     th1h1 = rs[RCRITPH1H1][cell] == 0 ? 0 : cl.cons[CPH1H1][time][cell] / rs[RCRITPH1H1][cell];
     tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : avgpd / rs[RCRITPDELTA][cell];
-    return ms * (oe + (1 + tdelta) / (1 + tdelta + SQUARE(th1h1)  ));
+    //return ms * (oe + (1 + tdelta) / (1 + tdelta + SQUARE(th1h1)  ));
+    return ms * (  (1 + tdelta) / (1 + tdelta + SQUARE(th1h1)  ));
 }
 
 /* 151221: transcription_mespa calculates mRNA transcription for mespa, taking into account the effects of dimer repression
@@ -1071,7 +1072,8 @@ inline double transcription_mespa (double** rs, con_levels& cl, int time, int ce
     tdelta = rs[RCRITPDELTA][cell] == 0 ? 0 : avgpd / (rs[RCRITPDELTA][cell]);
     
     //return ms * (oe + (tdelta) / (tdelta + rs[NS1][cell] * SQUARE(th1h1)  + SQUARE(tmespbmespb)));
-    return ms * (oe + (tdelta) / (1+ tdelta +  SQUARE(th1h1) ));
+    //return ms * (oe + (tdelta) / (1+ tdelta +  SQUARE(th1h1) ));
+    return ms * (  (tdelta) / (1+ tdelta +  SQUARE(th1h1) ));
 }
 
 /* 151221: transcription_mespb calculates mRNA transcription for mespb, taking into account the effects of dimer repression
@@ -1109,7 +1111,8 @@ inline double transcription_mespb (double** rs, con_levels& cl, int time, int ce
     
     //+ SQUARE(tmespamespb)
     //return ms * (oe + (1 + tdelta) / (1 + tdelta + SQUARE(tmespamespa) + SQUARE(tmespamespb)+SQUARE(tmespbmespb)));
-    return ms * (oe + (1 + tdelta) / (1 + tdelta + SQUARE(tmespamespa) +SQUARE(tmespbmespb)));
+    //return ms * (oe + (1 + tdelta) / (1 + tdelta + SQUARE(tmespamespa) +SQUARE(tmespbmespb)));
+    return ms * ( (1 + tdelta) / (1 + tdelta + SQUARE(tmespamespa) +SQUARE(tmespbmespb)));
 }
 
 /* calc_neighbors_1d calculates a given cell's neighbors in a 1D simulation
