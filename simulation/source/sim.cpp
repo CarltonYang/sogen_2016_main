@@ -460,7 +460,7 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
                 
                 // Perform biological calculations
                 st_context stc(time_prev, baby_j, k);
-                protein_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_protein);
+                protein_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_protein,md, past_induction, past_recovery,overfactor);
                 dimer_proteins(sd, rs.rates_active, baby_cl, stc);
                 mRNA_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_mrna, md, past_induction, past_recovery,overfactor);
             }
@@ -720,28 +720,48 @@ void update_rates (rates& rs, int active_start) {
 	151221: Added prtein synthesis for mespa and mespb
  */
 const cph_indices MESPB_INDICES(CMMESPB, CPMESPB, CPMESPBMESPB, RPSMESPB, RPDMESPB, RDAMESPBMESPB, RDDIMESPBMESPB, RDELAYPMESPB, IMESPB, IPMESPB);
-void protein_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc, int old_cells_protein[]) {
+
+
+void protein_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc, int old_cells_protein[],mutant_data& md,bool past_induction, bool past_recovery,double overfactor[]) {
     double dimer_effects[NUM_HER_INDICES] = {0}; // Heterodimer calculations
     di_args dia(rs, cl, stc, dimer_effects); // WRAPper for repeatedly used structs
     cp_args cpa(sd, rs, cl, stc, old_cells_protein, dimer_effects); // WRAPper for repeatedly used indices
     
+    double oe[3] = {0,0,0};
+    
+        //cout<< md.overexpression_rate<<endl;
+    if (past_induction) {
+            //cout<<"PAST"<<endl;
+        if (!past_recovery) {
+            if (md.overexpression_rate==RPSH1){
+                oe[0] = overfactor[0];
+                //oe = overfactor[OE_index];
+                //cout<< oe<<endl;
+            } else if (md.overexpression_rate == RPSMESPA){
+                oe[1]= overfactor[1];
+            } else if(md.overexpression_rate == RPSMESPB){
+                oe[2]= overfactor[2];
+            }
+        }
+        
+    }
     /// Dimerizing genes
     
     // Her1
     //dim_int(dia, di_indices(CPH1, CPH7,  CPH1H7,  RDAH1H7,  RDDIH1H7,  IH1));
     //dim_int(dia, di_indices(CPH1, CPH13, CPH1H13, RDAH1H13, RDDIH1H13, IH1));
-    con_protein_her(cpa, cph_indices(CMH1, CPH1, CPH1H1, RPSH1, RPDH1, RDAH1H1, RDDIH1H1, RDELAYPH1, IH1, IPH1));
+    con_protein_her(cpa, cph_indices(CMH1, CPH1, CPH1H1, RPSH1, RPDH1, RDAH1H1, RDDIH1H1, RDELAYPH1, IH1, IPH1),oe[0]);
     
     
     
     if (sd.section == SEC_ANT) {
         // MespA
         dim_int(dia, di_indices(CPMESPA, CPMESPB, CPMESPAMESPB, RDAMESPAMESPB, RDDIMESPAMESPB, IMESPA));
-        con_protein_her(cpa, cph_indices(CMMESPA, CPMESPA, CPMESPAMESPA, RPSMESPA, RPDMESPA, RDAMESPAMESPA, RDDIMESPAMESPA, RDELAYPMESPA, IMESPA, IPMESPA));
+        con_protein_her(cpa, cph_indices(CMMESPA, CPMESPA, CPMESPAMESPA, RPSMESPA, RPDMESPA, RDAMESPAMESPA, RDDIMESPAMESPA, RDELAYPMESPA, IMESPA, IPMESPA),oe[1]);
         
         // MespB
         dim_int(dia, di_indices(CPMESPB, CPMESPA, CPMESPAMESPB, RDAMESPAMESPB, RDDIMESPAMESPB, IMESPB));
-        con_protein_her(cpa, MESPB_INDICES);
+        con_protein_her(cpa, MESPB_INDICES,oe[2]);
     }
     
     
@@ -778,7 +798,7 @@ inline void dim_int (di_args& a, di_indices dii) {
 	notes:
 	todo:
  */
-inline void con_protein_her (cp_args& a, cph_indices i) {
+inline void con_protein_her (cp_args& a, cph_indices i,double oe) {
     double** r = a.rs;
     concentration_level<double>& c = a.cl.cons;
     int cell = a.stc.cell;
@@ -791,7 +811,7 @@ inline void con_protein_her (cp_args& a, cph_indices i) {
     c[i.con_protein][tc][cell] =
     c[i.con_protein][tp][cell]
     + a.sd.step_size *
-    (r[i.rate_synthesis][cell] * c[i.con_mrna][td][a.old_cells[i.old_cell]]
+    ((1+oe)*r[i.rate_synthesis][cell] * c[i.con_mrna][td][a.old_cells[i.old_cell]]
      - r[i.rate_degradation][cell] * c[i.con_protein][tp][cell]
      - 2 * r[i.rate_association][cell] * SQUARE(c[i.con_protein][tp][cell])
      + 2 * r[i.rate_dissociation][cell] * c[i.con_dimer][tp][cell]
@@ -998,7 +1018,7 @@ void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc,
                 //cout<<"PAST"<<endl;
                 if (!past_recovery) {
                     
-                    oe = overfactor[OE_index];
+                    //oe = overfactor[OE_index];
                     //cout<< oe<<endl;
                 }
             }
