@@ -713,7 +713,7 @@ void calc_max_delay_size (input_params& ip, sim_data& sd, rates& rs, double** se
 		for (int j = MIN_DELAY; j <= MAX_DELAY; j++) {
 			for (int k = 0; k < sd.width_total; k++) {
 				// Calculate the minimum delay, accounting for the maximum allowable perturbation and gradients
-                cout<<"DELAY IDX: "<< j << ", " << ((sets[i][j]+ sets[i][j] * rs.factors_perturb[j]) * rs.factors_gradient[j][k])/ sd.step_size + 1<<endl;
+                //cout<<"DELAY IDX: "<< j << ", " << ((sets[i][j]+ sets[i][j] * rs.factors_perturb[j]) * rs.factors_gradient[j][k])/ sd.step_size + 1<<endl;
                 //cout<<"MAX: "<< max<< " "<<(sets[i][j] + (sets[i][j] * rs.factors_perturb[j])) * rs.factors_gradient[j][k]<<" ";
 				max = MAX(max, (sets[i][j] + (sets[i][j] * rs.factors_perturb[j])) * rs.factors_gradient[j][k]);
                 //cout<<"NEW MAX: "<< max<<endl;

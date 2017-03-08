@@ -1,5 +1,5 @@
-#PBS -N sres_17s_test03
-#PBS -l walltime=144:00:00,nodes=bm0005:ppn=8+bm0006:ppn=8
+#PBS -N sres_17s_test13
+#PBS -l walltime=144:00:00,nodes=2:ppn=8
 #PBS -q biomath
 #PBS -m bea
 #PBS -j oe
@@ -7,4 +7,4 @@
 
 cd $PBS_O_WORKDIR
 
-mpiexec -np 16 ./sres -r nguess.ranges -g 3000 -p 48 -P 8 -a -x 50 -w 10 -y 4 -M 6 -V 600 -Y 600 -Z 600 -Q 600 -K 600 -s 3000 -r ../simulation/gradient1.txt -u ../simulation/pert.txt > s03.txt
+mpiexec -np 16 ./sres -r 0307.ranges -g 3000 -p 48 -P 8 -a -x 50 -w 10 -y 4 -M 6 -V 600 -Y 600 -Z 600 -Q 600 -K 600 -s 3000 -r ../simulation/gradient1.txt -u ../simulation/pert.txt > s13.txt

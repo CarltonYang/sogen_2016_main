@@ -51,8 +51,8 @@ void simulate_all_params (input_params& ip, rates& rs, sim_data& sd, double** se
     
     // Initialize the concentration levels structs
     int max_cl_size = MAX(sd.steps_til_growth, sd.max_delay_size + sd.steps_total - sd.steps_til_growth) / sd.big_gran + 1;
-    cout<<"Max cl size: "<< max_cl_size<<endl;
-    cout<<"Max delay size: "<<sd.max_delay_size<<endl;
+    //cout<<"Max cl size: "<< max_cl_size<<endl;
+    //cout<<"Max delay size: "<<sd.max_delay_size<<endl;
     con_levels cl(NUM_CON_STORE, max_cl_size, sd.cells_total, sd.active_start); // Concentration levels for analysis and storage
     con_levels baby_cl(NUM_CON_LEVELS, sd.max_delay_size, sd.cells_total, sd.active_start); // Concentration levels for simulating (time in this cl is treated cyclically)
     
@@ -63,7 +63,7 @@ void simulate_all_params (input_params& ip, rates& rs, sim_data& sd, double** se
         overfactor[0]=rs.rates_base[OEHER];
         overfactor[1]=rs.rates_base[OEMESPA];
         overfactor[2]=rs.rates_base[OEMESPB];
-        cout<<"RATES: "<<rs.rates_base[OEHER]<<" "<<rs.rates_base[OEMESPA]<<" "<<rs.rates_base[OEMESPB]<<endl;
+        //cout<<"RATES: "<<rs.rates_base[OEHER]<<" "<<rs.rates_base[OEMESPA]<<" "<<rs.rates_base[OEMESPB]<<endl;
         //cout<<"UPDATED OE: HER1: "<<mds[MUTANT_HER1OVER].overexpression_factor<<"; MESPA: "<<mds[MUTANT_MESPAOVER].overexpression_factor<<"; MESPB: "<<mds[MUTANT_MESPBOVER].overexpression_factor<<endl;
         score[i] = simulate_param_set(i, ip, sd, rs, cl, baby_cl, mds, file_passed, file_scores, dirnames_cons, file_features, file_conditions,overfactor);
         sets_passed += determine_set_passed(sd, i, score[i]); // Calculate the maximum score and whether the set passed
@@ -973,7 +973,7 @@ void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc,
             double sum=0;
             if (cell % sd.width_total == cl.active_start_record[time]) {
                 sum = (cur_cons[cells[0]] + cur_cons[cells[3]] + cur_cons[cells[4]] + cur_cons[cells[5]]) / 4;
-            } else if (cell % sd.width_total == cl.active_start_record[time]) {
+            } else if (cell % sd.width_total == cl.active_end_record[time]) {
                 sum = (cur_cons[cells[0]] + cur_cons[cells[1]] + cur_cons[cells[2]] + cur_cons[cells[3]]) / 4;
             } else {
                 sum = (cur_cons[cells[0]] + cur_cons[cells[1]] + cur_cons[cells[2]] + cur_cons[cells[3]] + cur_cons[cells[4]] + cur_cons[cells[5]]) / 6;
