@@ -118,7 +118,16 @@ double test_DAPT_mutant_ant (mutant_data& md, features& wtfeat) {
     md.conds_passed[SEC_ANT][0] = md.feat.sync_score_ant[IMH1] < 0.7;
     cout<<"DAPT 1: " <<md.conds_passed[SEC_ANT][0]<<"; "<<md.feat.sync_score_ant[IMH1]<<endl;
     
-    md.conds_passed[SEC_ANT][1] = ((md.feat.amplitude_ant_time[IMH1][2] /  wtfeat.amplitude_ant_time[IMH1][2]) < 0.85 && (md.feat.amplitude_ant_time[IMH1][2] /  wtfeat.amplitude_ant_time[IMH1][2])> 0.3);
+    double temp=0;
+    double ratio =(md.feat.amplitude_ant_time[IMH1][2] /  wtfeat.amplitude_ant_time[IMH1][2]);
+    if (ratio< 0.85 && ratio > 0.3){
+        temp=1;
+    }
+    else if (ratio > .85){
+        temp= (2-ratio/.85);
+    }
+    md.conds_passed[SEC_ANT][1]=temp; // deltac.2.
+    //md.conds_passed[SEC_ANT][1] = ((md.feat.amplitude_ant_time[IMH1][2] /  wtfeat.amplitude_ant_time[IMH1][2]) < 0.85 && (md.feat.amplitude_ant_time[IMH1][2] /  wtfeat.amplitude_ant_time[IMH1][2])> 0.3);
     cout<<"DAPT 2: " <<md.conds_passed[SEC_ANT][1]<<"; "<<md.feat.amplitude_ant_time[IMH1][2]<<" "<< wtfeat.amplitude_ant_time[IMH1][2]<<" "<<md.feat.amplitude_ant_time[IMH1][2] / wtfeat.amplitude_ant_time[IMH1][2]<<endl;
 
     

@@ -285,6 +285,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                         
                         double giuratio= last_period/  md.feat.period_post;
                         if (giuratio< 1.4 || giuratio> 2.2) {
+                            cout<< giuratio<<endl;
                             passed=false;
                         }
                         
@@ -427,10 +428,13 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                 
                 int time_660 = anterior_time(sd,(660/sd.step_size));
                 int time_660_end = anterior_time(sd,(690)/sd.step_size);
+                cout<< "WT MESP AMP: ";
                 for (; time_660 < time_660_end; time_660+= 6/sd.step_size){
                     md.feat.amplitude_ant_time[IMMESPB][0]+=amp_10(sd, cl, CMMESPB, time_660);            //MESP  comparison
                     md.feat.amplitude_ant_time[IMMESPA][0]+=amp_10(sd, cl, CMMESPA, time_660);            //MESP  comparison
+                    cout <<amp_10(sd, cl, CMMESPB, time_660)<< " " ;
                 }
+                cout <<endl;
                 md.feat.amplitude_ant_time[IMMESPB][0]/=5;
                 md.feat.amplitude_ant_time[IMMESPA][0]/=5;
                 md.feat.amplitude_ant_time[IMMESPA][2]/=5;
@@ -468,11 +472,14 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 			if (index == 0 ){
                 int time_630 = anterior_time(sd,(630/sd.step_size));
                 int time_630_end = anterior_time(sd,(660)/sd.step_size);
+                cout<< "HER1 AMP: ";
                 for (; time_630 < time_630_end; time_630+= 6/sd.step_size){
                     md.feat.amplitude_ant_time[IMH1][1]+=amp_10(sd, cl, CMH1, time_630);        //her1over 1
                     md.feat.amplitude_ant_time[IMDELTA][1]+=amp_10(sd, cl, CMDELTA, time_630);  //her1over 2
                     md.feat.amplitude_ant_time[IMMESPA][1]+=amp_10(sd, cl, CMMESPA, time_630);  //her1over 3
+                    cout<<amp_10(sd, cl, CMH1, time_630)<< " "<<amp_10(sd, cl, CMDELTA, time_630)<< " "<<amp_10(sd, cl, CMMESPA, time_630)<< endl;
                 }
+                
                 md.feat.amplitude_ant_time[IMH1][1]/=5;
                 md.feat.amplitude_ant_time[IMDELTA][1]/=5;
                 md.feat.amplitude_ant_time[IMMESPA][1]/=5;
@@ -519,10 +526,13 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 			if (index==3){
 				int time_660 = anterior_time(sd, (660)/sd.step_size);         //one hour after induction, 10 snapshot in 30 minutes
 				int time_660_end = anterior_time(sd, (690)/sd.step_size);
+                cout << "MESPA AMP: "<< index<< " ";
 				for (;time_660<time_660_end; time_660+=(6/sd.step_size)){
-					
-					md.feat.amplitude_ant_time[IMMESPB][0]+= amp_10(sd, cl, CMMESPB, time_660);
+					double temp =amp_10(sd, cl, CMMESPB, time_660);
+                    cout<< temp<< " ";
+                    md.feat.amplitude_ant_time[IMMESPB][0]+=temp;
 				}
+                cout<<endl;
                 md.feat.amplitude_ant_time[IMMESPB][0]/=5;
                 //cout<<"MUTANT MESPA: "<<md.feat.amplitude_ant_time[IMMESPB][0]<<endl;
                 
@@ -541,10 +551,14 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 			if (index==2 ){
                 int time_690 = anterior_time(sd, (660)/sd.step_size);         //one hour after induction, 10 snapshot in 30 minutes
                 int time_690_end = anterior_time(sd, (690)/sd.step_size);
+                cout << "MESPB AMP: "<< index<< " ";
                 for (;time_690<time_690_end; time_690+=(6/sd.step_size)){
                     //md.feat.amplitude_ant_time[IMMESPA][0]+= amp_10(sd, cl, CMMESPA, time_690);
-                    md.feat.amplitude_ant_time[IMMESPB][0]+= amp_10(sd, cl, CMMESPB, time_690);
+                    double temp =amp_10(sd, cl, CMMESPB, time_690);
+                    cout<< temp<< " ";
+                    md.feat.amplitude_ant_time[IMMESPB][0]+= temp;
                 }
+                cout<<endl;
                 md.feat.amplitude_ant_time[IMMESPB][0]/=5;
                 //md.feat.amplitude_ant_time[IMMESPA][0]/=5;
                 //cout<<"MUTANT MESPB: "<<md.feat.amplitude_ant_time[IMMESPB][0]<<endl;
