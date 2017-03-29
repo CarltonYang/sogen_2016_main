@@ -947,8 +947,8 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][1] = CW_A;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][2] = CW_B;
     mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][3] = CW_B;
-    mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][4] = CW_A;
-    mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][5] = CW_A;
+    mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][4] = CW_B;
+    mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][5] = CW_B;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][6] = CW_A;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][7] = CW_A;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][8] = CW_B;
