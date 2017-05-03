@@ -369,11 +369,16 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
             if (index == 0) { //only measure her1
                 int time_600 = anterior_time(sd,(600/sd.step_size));
                 int time_600_end = anterior_time(sd,(600+30)/sd.step_size);
+                //cout<<"WT mh1 sync: ";
+                cout<<"WT delta2 mh1 amp: ";
                 for (; time_600 < time_600_end; time_600+= 6/sd.step_size){
                     md.feat.sync_score_ant[IMH1]+=ant_sync(sd,cl,CMH1, time_600);                  //WT 4
+                    //cout<<ant_sync(sd,cl,CMH1, time_600)<< " ";
                     md.feat.amplitude_ant_time[IMH1][0]+=amp_10(sd, cl, CMH1, time_600);           //delta 2 comparison
+                    cout<<amp_10(sd, cl, CMH1, time_600)<< ", ";
                 }
-
+                cout<<endl;
+                
                 int time_630 = anterior_time(sd,(630/sd.step_size));
                 /*int time_630_end = anterior_time(sd,(660)/sd.step_size);
                 for (; time_630 < time_630_end; time_630+= 6/sd.step_size){
@@ -385,10 +390,12 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                 */
                 int time_three = anterior_time(sd, (840)/sd.step_size);
                 int time_three_end = anterior_time(sd, (870)/sd.step_size);
+                cout<<"WT dapt2 mh1 amp: ";
                 for (;time_three<time_three_end; time_three+=(6/sd.step_size)){
                     md.feat.amplitude_ant_time[IMH1][2]+=amp_10(sd, cl, CMH1, time_three);         //DAPT 2 comparison
+                    cout<<amp_10(sd, cl, CMH1, time_three)<< ", ";
                 }
-                
+                cout<<endl;
                 md.feat.sync_score_ant[IMH1]/=5;
                 md.feat.amplitude_ant_time[IMH1][0]/=5;
                 md.feat.amplitude_ant_time[IMH1][1]=amp_10(sd, cl, CMH1, time_630);
@@ -408,7 +415,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                 for (; time_600 < time_600_end; time_600+= 6/sd.step_size){
                     md.feat.sync_score_ant[index]+=mesp_sync(sd,cl,index+1, time_600);
                 }
-                md.feat.sync_score_ant[index]/=5;
+                md.feat.sync_score_ant[index]/=5;                   //mesp a/b complementary score in sync_score_ant[1/2]
                 //cout<<"COMP SCORE: "<< index<< " "<<md.feat.sync_score_ant[index]<<endl;
                 
                 
@@ -416,17 +423,23 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
             if (index ==1){//mespa
                 int time_600 = anterior_time(sd,(600/sd.step_size));
                 int time_600_end = anterior_time(sd,(600+30)/sd.step_size);
+                cout<<"WT dapt4 mespa amp: ";
                 for (; time_600 < time_600_end; time_600+= 6/sd.step_size){
                     md.feat.amplitude_ant_time[IMDELTA][0]+=amp_10(sd, cl, CMMESPA, time_600);            //delta 4 comparison, using amplitude_ant_time[delta][0] to save space
                     md.feat.sync_score_ant[IMDELTA]+= ant_sync(sd, cl, CMMESPB, time_600);          //put wt mespb sync in delta since sync mespa/b are used for 2nd comp scores
+                    cout<<amp_10(sd, cl, CMMESPA, time_600)<< ", ";
                 }
+                cout<<endl;
+                
                 
                 int time_two = anterior_time(sd, (720)/sd.step_size);
                 int time_two_end = anterior_time(sd, (750)/sd.step_size);
+                cout<<"WT dapt3 mespa amp: ";
                 for (;time_two<time_two_end; time_two+=(6/sd.step_size)){
                     md.feat.amplitude_ant_time[IMMESPA][2]+=amp_10(sd, cl, CMMESPA, time_two);    //DAPT 3 comparison
+                    cout<<amp_10(sd, cl, CMMESPA, time_two)<< ", ";
                 }
-                
+                cout<<endl;
                 int time_660 = anterior_time(sd,(660/sd.step_size));
                 /*
                 int time_660_end = anterior_time(sd,(690)/sd.step_size);
@@ -457,12 +470,18 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
             if (index==0) {
 				int time_600 = anterior_time(sd,(600/sd.step_size));
 				int time_600_end = anterior_time(sd,(630/sd.step_size));
+                //cout<<"Delta mh1 sync: ";
+                cout<<"Delta mespb sync: ";
                 for (;time_600<time_600_end; time_600+=(6/sd.step_size)){
                     md.feat.sync_score_ant[IMH1]+=ant_sync(sd, cl, CMH1, time_600);             //delta 3
                     md.feat.sync_score_ant[IMMESPB]+= ant_sync(sd, cl, CMMESPB, time_600);        //delta 5
                     md.feat.amplitude_ant_time[IMH1][0]+=amp_10(sd, cl, CMH1, time_600);                //delta 2
                     md.feat.amplitude_ant_time[IMDELTA][0]+= amp_10(sd, cl, CMMESPA, time_600);         //delta 4   **using amplitude_ant_time[delta][0] to save space
+                    //cout<<ant_sync(sd, cl, CMH1, time_600)<< " ";
+                    //cout<<amp_10(sd, cl, CMMESPA, time_600)<< ", ";
+                    cout<<ant_sync(sd, cl, CMMESPB, time_600)<<",";
 				}
+                cout<<endl;
                 md.feat.amplitude_ant_time[IMDELTA][0]/=5;
 				md.feat.amplitude_ant_time[IMH1][0]/=5;
                 md.feat.sync_score_ant[IMH1]/=5;
@@ -489,6 +508,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                 md.feat.amplitude_ant_time[IMH1][1]=amp_10(sd, cl, CMH1, time_630);
                 md.feat.amplitude_ant_time[IMDELTA][1]=amp_10(sd, cl, CMDELTA, time_630);
                 md.feat.amplitude_ant_time[IMMESPA][1]=amp_10(sd, cl, CMMESPA, time_630);
+                cout<<"Her1over mh1,delta,mespa amp: "<<amp_10(sd, cl, CMH1, time_630)<<" "<<amp_10(sd, cl, CMDELTA, time_630)<<" "<<amp_10(sd, cl, CMMESPA, time_630)<<endl;
                 //cout<<"HER1OVER2 "<<md.feat.amplitude_ant_time[index][1]<< " "<<md.feat.amplitude_ant_time[IMDELTA][1]<< " "<< md.feat.amplitude_ant_time[IMMESPA][1]<<endl;
             }
             
@@ -510,11 +530,16 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 			if (index == 0){
 				int time_three = anterior_time(sd, (840)/sd.step_size);
                 int time_three_end = anterior_time(sd, (870)/sd.step_size);
+                //cout<<"DAPT mh1 sync: ";
+                cout<<"DAPT mespb sync: ";
 				for (;time_three<time_three_end; time_three+=(6/sd.step_size)){
 					md.feat.amplitude_ant_time[IMH1][2]+=amp_10(sd, cl, CMH1, time_three);   //DAPT 2
 					md.feat.sync_score_ant[IMH1]+=ant_sync(sd, cl, CMH1, time_three);     //DAPT 1
                     md.feat.sync_score_ant[IMMESPB]+= ant_sync(sd, cl, CMMESPB, time_three);
+                    cout<<ant_sync(sd, cl, CMMESPB, time_three)<< " ";
+                    //cout<<amp_10(sd, cl, CMH1, time_three)<< ", ";
 				}
+                cout<<endl;
                 md.feat.amplitude_ant_time[IMH1][2]/=5;
 				md.feat.sync_score_ant[IMH1]/=5;
                 md.feat.sync_score_ant[IMMESPB]/=5;
@@ -523,9 +548,12 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 			if (index==1) {
 				int time_two = anterior_time(sd, (720)/sd.step_size);
 				int time_two_end = anterior_time(sd, (750)/sd.step_size);
+                cout<<"DAPT immespa amp: ";
 				for (;time_two<time_two_end; time_two+=(6/sd.step_size)){
 					md.feat.amplitude_ant_time[IMMESPA][2]+=amp_10(sd, cl, CMMESPA, time_two);    //DAPT 3
+                    cout<<amp_10(sd, cl, CMMESPA, time_two)<< ", ";
 				}
+                cout<<endl;
                 md.feat.amplitude_ant_time[IMMESPA][2]/=5;
                 //cout<< " DAPTA_MESPA mutant: "<<md.feat.amplitude_ant_time[index][2]<<endl;
 			}
@@ -544,6 +572,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 				}
                 cout<<endl;*/
                 md.feat.amplitude_ant_time[IMMESPB][0]=amp_10(sd, cl, CMMESPB, time_660);
+                cout<<"Mespa mmespb amp: "<<amp_10(sd, cl, CMMESPB, time_660)<<endl;
                 //cout<<"MUTANT MESPA: "<<md.feat.amplitude_ant_time[IMMESPB][0]<<endl;
                 
                 /*
@@ -559,7 +588,7 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
 		
 		if (md.index==MUTANT_MESPBOVER){                    //calculate oscillation features for mespb mutant, including posterior amplitude, anterior amplitude and syncrony score for different species
 			if (index==2 ){
-                int time_690 = anterior_time(sd, (660)/sd.step_size);         //one hour after induction, 10 snapshot in 30 minutes
+                int time_660 = anterior_time(sd, (660)/sd.step_size);         //one hour after induction, 10 snapshot in 30 minutes
                 /*int time_690_end = anterior_time(sd, (690)/sd.step_size);
                 cout << "MESPB AMP: "<< index<< " ";
                 for (;time_690<time_690_end; time_690+=(6/sd.step_size)){
@@ -569,7 +598,8 @@ void osc_features_ant (sim_data& sd, input_params& ip, features& wtfeat, char* f
                     md.feat.amplitude_ant_time[IMMESPB][0]+= temp;
                 }
                 cout<<endl;*/
-                md.feat.amplitude_ant_time[IMMESPB][0]=amp_10(sd, cl, CMMESPB, time_690);
+                md.feat.amplitude_ant_time[IMMESPB][0]=amp_10(sd, cl, CMMESPB, time_660);
+                cout<<"Mespb mmespb amp: "<<amp_10(sd, cl, CMMESPB, time_660)<<endl;
                 //md.feat.amplitude_ant_time[IMMESPA][0]/=5;
                 //cout<<"MUTANT MESPB: "<<md.feat.amplitude_ant_time[IMMESPB][0]<<endl;
                 //cout<<"MUTANT MESPB: "<<md.feat.amplitude_ant_time[IMMESPA][0]<<endl;

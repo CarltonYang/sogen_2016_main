@@ -177,7 +177,7 @@ double test_her1over_mutant_ant (mutant_data& md, features& wtfeat) {
     md.conds_passed[SEC_ANT][2]= (md.feat.amplitude_ant_time[IMMESPA][1] / wtfeat.amplitude_ant_time[IMMESPA][1]) <= AMP_SAT ? 1 : (1- ((md.feat.amplitude_ant_time[IMMESPA][1] / wtfeat.amplitude_ant_time[IMMESPA][1])-AMP_SAT));
     cout<<"1OVER 3: "<<md.conds_passed[SEC_ANT][2]*5<<"; "<< md.feat.amplitude_ant_time[IMMESPA][1]<<", "<<wtfeat.amplitude_ant_time[IMMESPA][1]<<" "<<md.feat.amplitude_ant_time[IMMESPA][1] / wtfeat.amplitude_ant_time[IMMESPA][1]<<endl;
     
-    md.conds_passed[SEC_ANT][3]= (md.feat.sync_score_ant[IMMESPB]) <= 0.7 ? 1 : (1- (md.feat.sync_score_ant[IMMESPB]-.7));
+    md.conds_passed[SEC_ANT][3]= (md.feat.sync_score_ant[IMMESPB]) <= 0.5 ? 1 : (1- (md.feat.sync_score_ant[IMMESPB]-.5));
     cout<<"1OVER 4: "<<md.conds_passed[SEC_ANT][3]*5<<"; "<<md.feat.sync_score_ant[IMMESPB]<<endl;
     
     cout<<"HER1 OVER SUM "<<(md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]) +

@@ -491,7 +491,7 @@ struct mutant_data {
 		memset(this->conds_passed, 0, sizeof(this->conds_passed));
 		memset(this->max_cond_scores, 0, sizeof(this->max_cond_scores));
 		memset(this->secs_passed, false, sizeof(this->secs_passed));
-		this->print_con = CMH1;
+		this->print_con = CMMESPA;
         only_post=false;
 	}
 	

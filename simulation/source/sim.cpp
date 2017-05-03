@@ -60,9 +60,12 @@ void simulate_all_params (input_params& ip, rates& rs, sim_data& sd, double** se
     for (int i = 0; i < ip.num_sets; i++) {
         memcpy(rs.rates_base, sets[i], sizeof(double) * NUM_RATES); // Copy the set's rates to the current simulation's rates
         double overfactor[3]={0};
+        
+        //set up over-expression for 3 mutants
         overfactor[0]=rs.rates_base[OEHER];
         overfactor[1]=rs.rates_base[OEMESPA];
         overfactor[2]=rs.rates_base[OEMESPB];
+        
         //cout<<"RATES: "<<rs.rates_base[OEHER]<<" "<<rs.rates_base[OEMESPA]<<" "<<rs.rates_base[OEMESPB]<<endl;
         //cout<<"UPDATED OE: HER1: "<<mds[MUTANT_HER1OVER].overexpression_factor<<"; MESPA: "<<mds[MUTANT_MESPAOVER].overexpression_factor<<"; MESPB: "<<mds[MUTANT_MESPBOVER].overexpression_factor<<endl;
         score[i] = simulate_param_set(i, ip, sd, rs, cl, baby_cl, mds, file_passed, file_scores, dirnames_cons, file_features, file_conditions,overfactor);
@@ -131,7 +134,7 @@ double simulate_param_set (int set_num, input_params& ip, sim_data& sd, rates& r
     int end_section = SEC_ANT * !(sd.no_growth);
     for (int i = SEC_POST; i <= end_section; i++) {
         sd.section = i;
-        num_passed += simulate_section(set_num, ip, sd, rs, cl, baby_cl, mds, dirnames_cons, scores,overfactor);
+        num_passed += simulate_section(set_num, ip, sd, rs, cl, baby_cl, mds, dirnames_cons, scores, overfactor);
     }
     
     // Calculate the total score
@@ -237,8 +240,11 @@ void reset_mutant_scores (input_params& ip, mutant_data mds[]) {
     //mds[MUTANT_WILDTYPE].conds_passed[SEC_WAVE][1]=1;
     //mds[MUTANT_WILDTYPE].conds_passed[SEC_WAVE][2]=1;
     //mds[MUTANT_WILDTYPE].conds_passed[SEC_WAVE][3]=1;
-    mds[MUTANT_WILDTYPE].conds_passed[SEC_ANT][6]=1;
-    mds[MUTANT_WILDTYPE].conds_passed[SEC_ANT][7]=1;
+    
+    // apr change
+    
+    //mds[MUTANT_WILDTYPE].conds_passed[SEC_ANT][6]=1;
+    //mds[MUTANT_WILDTYPE].conds_passed[SEC_ANT][7]=1;
 }
 
 /* mutant_sim_message prints a message indicating that the given mutant is being simulated in the given section
@@ -839,7 +845,7 @@ inline void con_protein_delta (cp_args& a, cpd_indices i) {
     c[i.con_protein][tc][cell] =
     c[i.con_protein][tp][cell]
     + a.sd.step_size * (r[i.rate_synthesis][cell] * c[i.con_mrna][td][a.old_cells[i.old_cell]]
-                        - r[i.rate_degradation][cell] * c[i.con_protein][tp][cell]);
+    - r[i.rate_degradation][cell] * c[i.con_protein][tp][cell]);
 }
 
 /* dimer_proteins calculates the concentrations of every dimer for a given cell
@@ -1226,8 +1232,6 @@ void perturb_rates_all (rates& rs) {
     for (int i = 0; i < NUM_RATES; i++) {
         if (rs.factors_perturb[i] == 0) { // If the current rate has no perturbation factor then set every cell's rate to the base rate
             for (int j = 0; j < rs.cells; j++) {
-                double rnum;
-                rnum=0.082;
                 rs.rates_cell[i][j] = rs.rates_base[i];
             }
         } else { // If the current rate has a perturbation factor then set every cell's rate to a randomly perturbed positive or negative variation of the base with a maximum perturbation up to the rate's perturbation factor

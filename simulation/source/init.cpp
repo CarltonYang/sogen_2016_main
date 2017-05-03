@@ -979,7 +979,7 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
     mds[MUTANT_DELTA].cond_scores[SEC_ANT][2] = CW_A;
     mds[MUTANT_DELTA].cond_scores[SEC_ANT][3] = CW_A;
     mds[MUTANT_DELTA].calc_max_scores();
-    mds[MUTANT_DELTA].print_con = CMDELTA;
+    mds[MUTANT_DELTA].print_con = CMH1;
 	
      
 	// Her1-overexpressed
@@ -1001,7 +1001,7 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
 	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][2] = CW_A;
 	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][3] = CW_A;
 	mds[MUTANT_HER1OVER].calc_max_scores();
-	mds[MUTANT_HER1OVER].print_con = CMH1;
+	mds[MUTANT_HER1OVER].print_con = CMMESPB;
 	
     // DAPT
 	if (MUTANT_DAPT >= sd.num_active_mutants && single_mutant==false) {return mds;}
@@ -1020,7 +1020,7 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
 	mds[MUTANT_DAPT].cond_scores[SEC_ANT][1] = CW_A;
 	mds[MUTANT_DAPT].cond_scores[SEC_ANT][2] = CW_A;
 	mds[MUTANT_DAPT].cond_scores[SEC_ANT][3] = CW_A;
-    mds[MUTANT_DAPT].print_con= CMDELTA;
+    mds[MUTANT_DAPT].print_con= CMH1;
 	mds[MUTANT_DAPT].calc_max_scores();
 	
 	
