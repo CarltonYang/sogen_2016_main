@@ -23,6 +23,15 @@ tests.cpp contains test functions for every mutant.
 #include "tests.hpp" // Function declarations
 #include "macros.hpp"
 
+
+/*
+ *  To see how each of the features is calculated in the test, refer to featues.cpp
+ *  To see which tests are important, refer to init.cpp
+ */
+
+
+
+
 double test_wildtype_post (mutant_data& md, features& wtfeat) {
     md.conds_passed[SEC_POST][0] = 28 < md.feat.period_post && md.feat.period_post < 32;  // ***29 30
     md.conds_passed[SEC_POST][1] = md.feat.peaktotrough_end >= 1.5 && md.feat.peaktotrough_mid >= 1.5 && (md.feat.peaktotrough_mid / md.feat.peaktotrough_end) <= 1.5;
