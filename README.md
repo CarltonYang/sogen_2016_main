@@ -1,4 +1,4 @@
-fZebrafish somitogenesis simulation
+wfZebrafish somitogenesis simulation
 ==================================
 
 Table of contents

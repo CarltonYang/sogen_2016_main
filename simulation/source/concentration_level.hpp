@@ -1,8 +1,8 @@
 //
 //  con_level.cpp
+//  This class is used to realize funciton overlaoding to square brackets for accesssing 3D arrays
 //
-//
-//  Created by aylab on 7/18/16.
+//  Created by Carlton Yang on 7/18/16.
 //
 //
 #ifndef CONCENTRATION_LEVEL_HPP
@@ -12,6 +12,7 @@ template<class T>
 class concentration_level{
 public:
     
+    // inner class for function over-loading
     class cell{
     public:
         cell(T *row): _array(row) {}
@@ -19,6 +20,8 @@ public:
         const T& operator[](int k) const {return _array[k];}
         T *_array;
     };
+    
+    // inner class for function over-loading
     class timespan{
     public:
         timespan(T *plane,int width): _array(plane), _width(width){};
@@ -33,10 +36,14 @@ public:
         T *_array;
         int _width;
     };
+    
+    //constructor
     concentration_level(int height =0, int length =0, int width =0):_height(height),_length(length),_width(width){
         allocate_array();
     }
     
+    
+    //constructor
     concentration_level(const concentration_level<T>& other):_height(other._height),_length(other._length),_width(other._width){
         allocate_array();
         for (int he; he< _height; he++){
@@ -67,16 +74,19 @@ public:
         }
     }
     
+    //function overloading
     timespan operator[](int i){
         timespan temp(_array+_length*_width*i, _width);
         return temp;
     }
     
+    //function overloading
     const timespan operator[](int i) const{
         timespan temp(_array+_length*_width*i, _width);
         return temp;
     }
     
+    //copy constructor
     concentration_level& operator=(const concentration_level& other){
         dealloc_array();
         _height=other._height;
@@ -93,15 +103,19 @@ public:
         return *this;
     }
     
+    
+    //destructor
     ~concentration_level() {
         dealloc_array();
     }
     
+    //access functions
     int height() const {return _height;}
     int length() const {return _length;}
     int width() const {return _width;}
     
 protected:
+    //memory management
     void dealloc_array(){
         if (_array){
             delete[] _array;
