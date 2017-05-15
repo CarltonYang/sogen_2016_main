@@ -51,8 +51,6 @@ void simulate_all_params (input_params& ip, rates& rs, sim_data& sd, double** se
     
     // Initialize the concentration levels structs
     int max_cl_size = MAX(sd.steps_til_growth, sd.max_delay_size + sd.steps_total - sd.steps_til_growth) / sd.big_gran + 1;
-    //cout<<"Max cl size: "<< max_cl_size<<endl;
-    //cout<<"Max delay size: "<<sd.max_delay_size<<endl;
     con_levels cl(NUM_CON_STORE, max_cl_size, sd.cells_total, sd.active_start); // Concentration levels for analysis and storage
     con_levels baby_cl(NUM_CON_LEVELS, sd.max_delay_size, sd.cells_total, sd.active_start); // Concentration levels for simulating (time in this cl is treated cyclically)
     
@@ -66,8 +64,7 @@ void simulate_all_params (input_params& ip, rates& rs, sim_data& sd, double** se
         overfactor[1]=rs.rates_base[OEMESPA];
         overfactor[2]=rs.rates_base[OEMESPB];
         
-        //cout<<"RATES: "<<rs.rates_base[OEHER]<<" "<<rs.rates_base[OEMESPA]<<" "<<rs.rates_base[OEMESPB]<<endl;
-        //cout<<"UPDATED OE: HER1: "<<mds[MUTANT_HER1OVER].overexpression_factor<<"; MESPA: "<<mds[MUTANT_MESPAOVER].overexpression_factor<<"; MESPB: "<<mds[MUTANT_MESPBOVER].overexpression_factor<<endl;
+        //simuate all mutants
         score[i] = simulate_param_set(i, ip, sd, rs, cl, baby_cl, mds, file_passed, file_scores, dirnames_cons, file_features, file_conditions,overfactor);
         sets_passed += determine_set_passed(sd, i, score[i]); // Calculate the maximum score and whether the set passed
     }
@@ -184,7 +181,7 @@ int simulate_section (int set_num, input_params& ip, sim_data& sd, rates& rs, co
         knockout (rs, mds[i], 0);
         
         
-        
+        //simulat mutant
         double current_score = simulate_mutant(set_num, ip, sd, rs, cl, baby_cl, mds[i], mds[MUTANT_WILDTYPE].feat, dirnames_cons[i], temp_rates, overfactor);
         scores[sd.section * ip.num_active_mutants + i] = current_score;
         baby_cl.reset();
@@ -236,15 +233,6 @@ void reset_mutant_scores (input_params& ip, mutant_data mds[]) {
             
         }
     }
-    //mds[MUTANT_WILDTYPE].conds_passed[SEC_WAVE][0]=1;
-    //mds[MUTANT_WILDTYPE].conds_passed[SEC_WAVE][1]=1;
-    //mds[MUTANT_WILDTYPE].conds_passed[SEC_WAVE][2]=1;
-    //mds[MUTANT_WILDTYPE].conds_passed[SEC_WAVE][3]=1;
-    
-    // apr change
-    
-    //mds[MUTANT_WILDTYPE].conds_passed[SEC_ANT][6]=1;
-    //mds[MUTANT_WILDTYPE].conds_passed[SEC_ANT][7]=1;
 }
 
 /* mutant_sim_message prints a message indicating that the given mutant is being simulated in the given section
@@ -465,20 +453,14 @@ bool model (sim_data& sd, rates& rs, con_levels& cl, con_levels& baby_cl, mutant
                 calculate_delay_indices(sd, baby_cl, baby_j, j, k, rs.rates_active, old_cells_mrna, old_cells_protein);
                 
                 // Perform biological calculations
+                // NOTE: over-expression is now performed during protein synthesis. NOT mRNA synthesis
                 st_context stc(time_prev, baby_j, k);
                 protein_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_protein,md, past_induction, past_recovery,overfactor);
                 dimer_proteins(sd, rs.rates_active, baby_cl, stc);
                 mRNA_synthesis(sd, rs.rates_active, baby_cl, stc, old_cells_mrna, md, past_induction, past_recovery,overfactor);
             }
         }
-        /*
-        avg_delta/= sd.cells_total;
-        avg_rest/= sd.cells_total;
-        if (sd.section== SEC_ANT && (md.index== MUTANT_HER1OVER || md.index== MUTANT_MESPAOVER || md.index== MUTANT_MESPBOVER)&& j==62000){
-            cout<<"oe "<<md.index<<" " <<md.overexpression_rate<<" "<<md.overexpression_factor<<endl;}
-        if (sd.section== SEC_ANT && (md.index== MUTANT_WILDTYPE || md.index== MUTANT_DELTA)&& j==60000){
-            cout<<"avg delta "<< avg_delta<<"; avg rest"<<avg_rest<<endl;}
-         */
+        
         // Check to make sure the numbers are still valid
         if (any_less_than_0(baby_cl, baby_j) || concentrations_too_high(baby_cl, baby_j, sd.max_con_thresh)) {
             return false;
@@ -733,16 +715,12 @@ void protein_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& s
     di_args dia(rs, cl, stc, dimer_effects); // WRAPper for repeatedly used structs
     cp_args cpa(sd, rs, cl, stc, old_cells_protein, dimer_effects); // WRAPper for repeatedly used indices
     
+    // set up over expression factor
     double oe[3] = {0,0,0};
-    
-        //cout<< md.overexpression_rate<<endl;
     if (past_induction) {
-            //cout<<"PAST"<<endl;
         if (!past_recovery) {
             if (md.overexpression_rate==RPSH1){
                 oe[0] = overfactor[0];
-                //oe = overfactor[OE_index];
-                //cout<< oe<<endl;
             } else if (md.overexpression_rate == RPSMESPA){
                 oe[1]= overfactor[1];
             } else if(md.overexpression_rate == RPSMESPB){
@@ -754,12 +732,7 @@ void protein_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& s
     /// Dimerizing genes
     
     // Her1
-    //dim_int(dia, di_indices(CPH1, CPH7,  CPH1H7,  RDAH1H7,  RDDIH1H7,  IH1));
-    //dim_int(dia, di_indices(CPH1, CPH13, CPH1H13, RDAH1H13, RDDIH1H13, IH1));
     con_protein_her(cpa, cph_indices(CMH1, CPH1, CPH1H1, RPSH1, RPDH1, RDAH1H1, RDDIH1H1, RDELAYPH1, IH1, IPH1),oe[0]);
-    
-    
-    
     if (sd.section == SEC_ANT) {
         // MespA
         dim_int(dia, di_indices(CPMESPA, CPMESPB, CPMESPAMESPB, RDAMESPAMESPB, RDDIMESPAMESPB, IMESPA));
@@ -1002,35 +975,7 @@ void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc,
             avgpd = 0;
         }
         
-        
-        double oe = 0;
-        /*
-         if (past_induction && !past_recovery && (j == md.overexpression_rate)) {
-         oe = md.overexpression_factor;
-         //cout<<md.overexpression_factor<<endl;
-         }
-         */
-        int OE_index=0;
-        if (md.index==MUTANT_MESPAOVER){
-            OE_index=1;}
-        else if (md.index==MUTANT_MESPBOVER){
-            OE_index=2;
-        }
-        
-        
-        if (j==md.overexpression_rate){
-            //cout<< md.overexpression_rate<<endl;
-            if (past_induction) {
-                //cout<<"PAST"<<endl;
-                if (!past_recovery) {
-                    
-                    //oe = overfactor[OE_index];
-                    //cout<< oe<<endl;
-                }
-            }
-            
-        }
-        
+    
         if (j == IMMESPA && sd.section == SEC_ANT) {
             mtrans = transcription_mespa(rs, cl, WRAP(stc.time_cur - delays[j], sd.max_delay_size), old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe, sd.section);
             //cout<<"mespa"<<mtrans<<endl;
