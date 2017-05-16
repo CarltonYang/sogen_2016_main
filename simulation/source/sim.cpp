@@ -975,7 +975,7 @@ void mRNA_synthesis (sim_data& sd, double** rs, con_levels& cl, st_context& stc,
             avgpd = 0;
         }
         
-    
+        double oe =0;
         if (j == IMMESPA && sd.section == SEC_ANT) {
             mtrans = transcription_mespa(rs, cl, WRAP(stc.time_cur - delays[j], sd.max_delay_size), old_cells_mrna[IMH1 + j], avgpd, rs[RMSH1 + j][stc.cell], oe, sd.section);
             //cout<<"mespa"<<mtrans<<endl;
