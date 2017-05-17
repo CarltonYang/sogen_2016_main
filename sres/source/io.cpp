@@ -137,10 +137,14 @@ void parse_ranges_file (char* buffer, input_params& ip, sres_params& sp) {
 			sp.ub[rate] = 0;
 		}
 		
+        cout<<"Ranges: "<< sp.lb[rate]<<" "<<sp.ub[rate]<<endl;
+        
 		// Skip any comments until the end of the line
 		while (buffer[i] != '\n' && buffer[i] != '\0') {i++;}
 		rate++;
 	}
+    
+    
 }
 
 /* open_file opens the file with the given name and stores it in the given output file stream

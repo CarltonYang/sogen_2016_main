@@ -24,7 +24,7 @@ io.cpp contains functions for input and output of files and pipes. All I/O relat
 #include <cstdio> // Needed for fopen, fclose, fseek, ftell, rewind
 #include <sys/stat.h> // Needed for mkdir
 #include <unistd.h> // Needed for read, write, close
-
+#include <limits>
 #include "io.hpp" // Function declarations
 #include "sim.hpp" // Needed for anterior_time
 
@@ -281,6 +281,7 @@ void print_passed (input_params& ip, ofstream* file_passed, rates& rs) {
         june 2016, changed printing so that .cons actually corresponds to con_lv
 */
 void print_concentrations (input_params& ip, sim_data& sd, con_levels& cl, mutant_data& md, char* filename_cons, int set_num) {
+    
 	if (ip.print_cons) { // Print the concentrations only if the user specified it
 		int strlen_set_num = INT_STRLEN(set_num); // How many bytes the ASCII representation of set_num takes
 		char* str_set_num = (char*)mallocate(sizeof(char) * (strlen_set_num + 1));

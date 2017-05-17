@@ -1,11 +1,10 @@
-#PBS -N sres_16s_test54g
-#PBS -l nodes=bm0010:ppn=8+bm0011:ppn=8
+#PBS -N sres_17s_test05
+#PBS -l walltime=144:00:00,nodes=bm0019:ppn=8+bm0018:ppn=8
 #PBS -q biomath
-#PBS -M cyang@colgate.edu
 #PBS -m bea
 #PBS -j oe
 #PBS -r n
 
 cd $PBS_O_WORKDIR
 
-mpiexec -np 16 ./sres -r fguessnew.ranges -g 600 -p 96 -P 16 -a -x 50 -w 10 -y 4 -M 6 -V 600 -Y 600 -Z 600 -Q 600 -K 600 -r ../simulation/gradient1.txt -u ../simulation/pert.txt > o54g.txt 
+mpiexec -np 16 ./sres -r nguess.ranges -g 2000 -p 48 -P 8 -a -x 50 -w 10 -y 4 -M 6 -V 600 -Y 600 -Z 600 -Q 600 -K 600 -s 3000 -r ../simulation/gradient1.txt -u ../simulation/pert.txt > s05.txt

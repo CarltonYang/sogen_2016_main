@@ -713,10 +713,14 @@ void calc_max_delay_size (input_params& ip, sim_data& sd, rates& rs, double** se
 		for (int j = MIN_DELAY; j <= MAX_DELAY; j++) {
 			for (int k = 0; k < sd.width_total; k++) {
 				// Calculate the minimum delay, accounting for the maximum allowable perturbation and gradients
-				max = MAX(max, (sets[i][j] + (sets[i][j] * rs.factors_perturb[j])) * rs.factors_gradient[j][k]);  
+                //cout<<"DELAY IDX: "<< j << ", " << ((sets[i][j]+ sets[i][j] * rs.factors_perturb[j]) * rs.factors_gradient[j][k])/ sd.step_size + 1<<endl;
+                //cout<<"MAX: "<< max<< " "<<(sets[i][j] + (sets[i][j] * rs.factors_perturb[j])) * rs.factors_gradient[j][k]<<" ";
+				max = MAX(max, (sets[i][j] + (sets[i][j] * rs.factors_perturb[j])) * rs.factors_gradient[j][k]);
+                //cout<<"NEW MAX: "<< max<<endl;
 			}
 		}
 	}
+    cout<<"MAX DELAY: "<<max<< " "<<(MIN(max, sd.time_total) / sd.step_size + 1)<<endl;
 	sd.max_delay_size = MIN(max, sd.time_total) / sd.step_size + 1; // If the maximum delay is longer than the simulation time then set the maximum delay to the simulation time
 	if (sd.big_gran > sd.max_delay_size) {
 		cout << term->red << "The given big granularity cannot be larger than the maximum delay time (in time steps) of any given parameter set! Please reduce the big granularity with -b or --big-granularity. Remember that adding perturbations to a delay will likely increase its duration." << term->reset << endl;
@@ -925,6 +929,14 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
 		mds[i].cl.initialize(NUM_CON_LEVELS, sd.max_delay_size, sd.cells_total, sd.active_start);
 	}
 	
+    
+    
+    /*
+     *  To determine the score of each condition (0 or 3 or 5), change the CW_X for each condition
+     *  CW_A is 5, CW_B is 3, CW_C is 0
+     */
+    
+    
 	// Wild type
 	mds[MUTANT_WILDTYPE].print_name = copy_str("wildtype");
 	mds[MUTANT_WILDTYPE].dir_name = copy_str("wildtype");
@@ -943,15 +955,14 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][1] = CW_A;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][2] = CW_B;
     mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][3] = CW_B;
-    mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][4] = CW_A;
-    mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][5] = CW_A;
+    mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][4] = CW_B;
+    mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][5] = CW_B;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][6] = CW_A;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][7] = CW_A;
 	mds[MUTANT_WILDTYPE].cond_scores[SEC_ANT][8] = CW_B;
 	mds[MUTANT_WILDTYPE].calc_max_scores();
-    
+    // which concentration level to print/output to file
     mds[MUTANT_WILDTYPE].print_con = CMMESPB;
-	//mds[MUTANT_WILDTYPE].secs_passed[SEC_WAVE] = true;
 	
     
     
@@ -975,7 +986,8 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
     mds[MUTANT_DELTA].cond_scores[SEC_ANT][2] = CW_A;
     mds[MUTANT_DELTA].cond_scores[SEC_ANT][3] = CW_A;
     mds[MUTANT_DELTA].calc_max_scores();
-    mds[MUTANT_DELTA].print_con = CMDELTA;
+    // which concentration level to print/output to file
+    mds[MUTANT_DELTA].print_con = CMH1;
 	
      
 	// Her1-overexpressed
@@ -985,9 +997,9 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
 	mds[MUTANT_HER1OVER].num_knockouts = 0;
 	mds[MUTANT_HER1OVER].induction = ip.her1_induction / ip.step_size;
     mds[MUTANT_HER1OVER].recovery = ip.her1_induction / ip.step_size + (30/sd.step_size);
-    mds[MUTANT_HER1OVER].overexpression_rate = RMSH1;
+    mds[MUTANT_HER1OVER].overexpression_rate = RPSH1;
     mds[MUTANT_HER1OVER].overexpression_factor = 0 ;
-   
+    cout<<"HER1 OE: "<<mds[MUTANT_HER1OVER].overexpression_factor<<endl;
 	mds[MUTANT_HER1OVER].tests[SEC_POST] = test_her1over_mutant_post;
 	mds[MUTANT_HER1OVER].tests[SEC_ANT] = test_her1over_mutant_ant;
 	mds[MUTANT_HER1OVER].num_conditions[SEC_POST] = 0;
@@ -997,7 +1009,8 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
 	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][2] = CW_A;
 	mds[MUTANT_HER1OVER].cond_scores[SEC_ANT][3] = CW_A;
 	mds[MUTANT_HER1OVER].calc_max_scores();
-	mds[MUTANT_HER1OVER].print_con = CMH1;
+    // which concentration level to print/output to file
+	mds[MUTANT_HER1OVER].print_con = CMMESPB;
 	
     // DAPT
 	if (MUTANT_DAPT >= sd.num_active_mutants && single_mutant==false) {return mds;}
@@ -1016,7 +1029,8 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
 	mds[MUTANT_DAPT].cond_scores[SEC_ANT][1] = CW_A;
 	mds[MUTANT_DAPT].cond_scores[SEC_ANT][2] = CW_A;
 	mds[MUTANT_DAPT].cond_scores[SEC_ANT][3] = CW_A;
-    mds[MUTANT_DAPT].print_con= CMDELTA;
+    mds[MUTANT_DAPT].print_con= CMH1;
+    // which concentration level to print/output to file
 	mds[MUTANT_DAPT].calc_max_scores();
 	
 	
@@ -1026,15 +1040,17 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
 	mds[MUTANT_MESPAOVER].dir_name = copy_str("MESPAOVER");
 	mds[MUTANT_MESPAOVER].num_knockouts = 0;
 	mds[MUTANT_MESPAOVER].induction = ip.mespa_induction / ip.step_size;
-    mds[MUTANT_MESPAOVER].recovery = ip.mespa_induction / ip.step_size + (30/sd.step_size);
-    mds[MUTANT_MESPAOVER].overexpression_rate = RMSMESPA ;
+    mds[MUTANT_MESPAOVER].recovery = ip.mespa_induction / ip.step_size + (60/sd.step_size);
+    mds[MUTANT_MESPAOVER].overexpression_rate = RPSMESPA ;
     mds[MUTANT_MESPAOVER].overexpression_factor = 0;
+    cout<<"MESPA OE: "<<mds[MUTANT_MESPAOVER].overexpression_factor<<endl;
 	mds[MUTANT_MESPAOVER].tests[SEC_POST] = test_MESPAOVER_mutant_post;
 	mds[MUTANT_MESPAOVER].tests[SEC_ANT] = test_MESPAOVER_mutant_ant;
 	mds[MUTANT_MESPAOVER].num_conditions[SEC_POST] = 0;
 	mds[MUTANT_MESPAOVER].num_conditions[SEC_ANT] = 1;
 	mds[MUTANT_MESPAOVER].cond_scores[SEC_ANT][0] = CW_A;
     mds[MUTANT_MESPAOVER].print_con= CMMESPA;
+    // which concentration level to print/output to file
 	mds[MUTANT_MESPAOVER].calc_max_scores();
 	
 	
@@ -1042,19 +1058,17 @@ mutant_data* create_mutant_data (sim_data& sd, input_params& ip, rates& rs) {
 	if (MUTANT_MESPBOVER >= sd.num_active_mutants && single_mutant==false) {return mds;}
 	mds[MUTANT_MESPBOVER].print_name = copy_str("MESPbOVER mutant");
 	mds[MUTANT_MESPBOVER].dir_name = copy_str("MESPBOVER");
-	mds[MUTANT_MESPBOVER].num_knockouts = 0; 
-
+	mds[MUTANT_MESPBOVER].num_knockouts = 0;
 	mds[MUTANT_MESPBOVER].induction = ip.mespb_induction / ip.step_size;
-    mds[MUTANT_MESPBOVER].recovery = ip.mespb_induction / ip.step_size + (30/sd.step_size);
-    mds[MUTANT_MESPBOVER].overexpression_rate = RMSMESPB;
+    mds[MUTANT_MESPBOVER].recovery = ip.mespb_induction / ip.step_size + (60/sd.step_size);
+    mds[MUTANT_MESPBOVER].overexpression_rate = RPSMESPB;
     mds[MUTANT_MESPBOVER].overexpression_factor = 0;
 	mds[MUTANT_MESPBOVER].tests[SEC_POST] = test_MESPBOVER_mutant_post;
 	mds[MUTANT_MESPBOVER].tests[SEC_ANT] = test_MESPBOVER_mutant_ant;
 	mds[MUTANT_MESPBOVER].num_conditions[SEC_POST] = 0;
-	
-	mds[MUTANT_MESPBOVER].num_conditions[SEC_ANT] = 2;
+	mds[MUTANT_MESPBOVER].num_conditions[SEC_ANT] = 1;
 	mds[MUTANT_MESPBOVER].cond_scores[SEC_ANT][0] = CW_A;
-	mds[MUTANT_MESPBOVER].cond_scores[SEC_ANT][1] = CW_A;
+	// which concentration level to print/output to file
 	mds[MUTANT_MESPBOVER].print_con= CMMESPB;
 	mds[MUTANT_MESPBOVER].calc_max_scores();
 	return mds;

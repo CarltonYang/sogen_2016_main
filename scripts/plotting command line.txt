@@ -1,0 +1,41 @@
+plot synchronization 
+
+plot mh1 synchronization 
+
+python plot-snap-sync.py ../simulation/output/wildtype/set_0.cons ./check wt_sync_mh1 0.01 600
+——————————————————————————————————————————————
+plot mh1 vs. mespa/mespb complementary
+
+python plot-snap-comp.py ../simulation/output/wildtype/set_0.cons ../simulation/output/MESPAOVER/set_0.cons ./check compl-mh1-mespa 0.01 600
+python plot-snap-comp.py ../simulation/output/wildtype/set_0.cons ../simulation/output/MESPBOVER/set_0.cons ./check compl-mh1-mespb 0.01 600
+
+
+——————————————————————————————————————————————
+
+NOTE:
+The plots below require amplitudes/sync scores from simulations to be copied into the plot file
+
+——————————————————————————————————————————————
+plot mh1 synchronization bar graph
+
+python plot-bar-sync_mh1.py ./check sync_score_mh1
+——————————————————————————————————————————————
+plot mesp synchronization bar graph
+
+python plot-bar-sync_mesp.py ./check sync_score_mesp
+——————————————————————————————————————————————
+plot her1 mRNA amplitude (WT/Delta, WT/DAPT) bar graph
+
+python plot-bar-amp_mh1-5 ./check amp_score_mh1
+——————————————————————————————————————————————
+plot mespa amplitude comparison (WT/Delta, WT/DAPT) bar graph
+
+python plot-bar-amp-mmespa-5 ./check amp_score_mespa
+——————————————————————————————————————————————
+plot mespb mRNA in Mespa/Mespb amplitude
+
+python plot-bar-amp-mesp-1.py ./check amp_score_mesp-1
+——————————————————————————————————————————————
+plot wildtype/her1over mRNA amplitude
+
+python plot-bar-amp-her1over-1.py ./check amp_score_1

@@ -287,9 +287,9 @@ struct rates {
 	
 	~rates () {
 		for (int i = 0; i < NUM_RATES; i++) {
-			delete[] this->factors_gradient[i];
-			delete[] this->rates_cell[i];
-			delete[] this->rates_active[i];
+            if(factors_gradient[i]) {delete[] this->factors_gradient[i];}
+            if(rates_cell[i]) {delete[] this->rates_cell[i];}
+            if(rates_active[i]) {delete[] this->rates_active[i];}
 		}
 	}
 };
@@ -491,7 +491,7 @@ struct mutant_data {
 		memset(this->conds_passed, 0, sizeof(this->conds_passed));
 		memset(this->max_cond_scores, 0, sizeof(this->max_cond_scores));
 		memset(this->secs_passed, false, sizeof(this->secs_passed));
-		this->print_con = CMH1;
+		this->print_con = CMMESPA;
         only_post=false;
 	}
 	
