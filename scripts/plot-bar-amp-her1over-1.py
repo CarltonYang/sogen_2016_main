@@ -5,7 +5,7 @@ from scipy.stats.stats import pearsonr
 import sys
 import shared
 import struct
-
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -16,16 +16,40 @@ def main():
 	else:
 		directory = sys.argv[1]
 		image_name = sys.argv[2]
+                source = sys.argv[3]
 
-        wx1,wy1= plot_bar([88.6104])
-	wx2,wy2= plot_bar([86.8536])
-	wx3,wy3= plot_bar([295.609])
+        with open(source,'r') as f:
+                reader = csv.DictReader(f)
+                her1mlist=[]
+                her1wlist=[]
+                deltamlist=[]
+                deltawlist=[]
+                mespamlist=[]
+                mespawlist=[]
+                for line in reader:
+                        print line['12']
+                        info1 = line['12'].split('/')
+                        info2 = line['13'].split('/')
+                        info3 = line['14'].split('/')
+                        her1m,her1w = float(info1[0]),float(info1[1])
+                        deltam,deltaw = float(info2[0]),float(info2[1])
+                        mespam,mespaw = float(info3[0]),float(info3[1])
+                        her1mlist.append(her1m)
+                        her1wlist.append(her1w)
+                        deltamlist.append(deltam)
+                        deltawlist.append(deltaw)
+                        mespamlist.append(mespam)
+                        mespawlist.append(mespaw)
+                                
+        wx1,wy1= plot_bar(her1wlist)
+	wx2,wy2= plot_bar(deltawlist)
+	wx3,wy3= plot_bar(mespawlist)
 	#wx4,wy4= plot_bar([239.07])
 	#wx5,wy5= plot_bar([239.07])
 	
-	mx1,my1= plot_bar([24.5567])
-	mx2,my2= plot_bar([0.92375])
-	mx3,my3= plot_bar([51.4278])
+	mx1,my1= plot_bar(her1mlist)
+	mx2,my2= plot_bar(deltamlist)
+	mx3,my3= plot_bar(mespamlist)
 	#mx4,my4= plot_bar([76.9071])
 	#mx5,my5= plot_bar([100.725])
         N = 3
@@ -36,11 +60,11 @@ def main():
         width = 0.35       # the width of the bars
 
         fig, ax = plt.subplots()
-        rects1 = ax.bar(ind, men_means, width, color='#737373',)
+        rects1 = ax.bar(ind, men_means, width, color='#737373',yerr=men_std,error_kw=dict(elinewidth=2,ecolor='black',capsize =5, captick= 2))
 
         women_means = (mx1, mx2,mx3)
         women_std = (my1, my2,my3)
-        rects2 = ax.bar(ind + width, women_means, width, color='#a6a6a6')
+        rects2 = ax.bar(ind + width, women_means, width, color='#a6a6a6',yerr=women_std,error_kw=dict(elinewidth=2,ecolor='black',capsize =5, captick= 2))
 
         # add some text for labels, title and axes ticks
         ax.set_ylabel('Amplitude')
@@ -66,42 +90,3 @@ main()
 
 
 
-'''
-N = 5
-men_means = (20, 35, 30, 35, 27)
-men_std = (2, 3, 4, 1, 2)
-
-ind = np.arange(N)  # the x locations for the groups
-width = 0.35       # the width of the bars
-
-fig, ax = plt.subplots()
-rects1 = ax.bar(ind, men_means, width, color='r', yerr=men_std)
-
-women_means = (25, 32, 34, 20, 25)
-women_std = (3, 5, 2, 3, 3)
-rects2 = ax.bar(ind + width, women_means, width, color='y', yerr=women_std)
-
-# add some text for labels, title and axes ticks
-ax.set_ylabel('Scores')
-ax.set_title('Scores by group and gender')
-ax.set_xticks(ind + width / 2)
-ax.set_xticklabels(('G1', 'G2', 'G3', 'G4', 'G5'))
-
-ax.legend((rects1[0], rects2[0]), ('Men', 'Women'))
-
-
-def autolabel(rects):
-    """
-    Attach a text label above each bar displaying its height
-    """
-    for rect in rects:
-        height = rect.get_height()
-        ax.text(rect.get_x() + rect.get_width()/2., 1.05*height,
-                '%d' % int(height),
-                ha='center', va='bottom')
-
-autolabel(rects1)
-autolabel(rects2)
-
-plt.show()
-'''

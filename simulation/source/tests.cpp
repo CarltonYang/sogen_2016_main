@@ -31,8 +31,16 @@ tests.cpp contains test functions for every mutant.
 
 
 
+/*
+ ofstream myfile;
+ myfile.open ("features.txt");
+ myfile.close();
+ */
+
+
 
 double test_wildtype_post (mutant_data& md, features& wtfeat) {
+    
     md.conds_passed[SEC_POST][0] = 28 < md.feat.period_post && md.feat.period_post < 32;  // ***29 30
     md.conds_passed[SEC_POST][1] = md.feat.peaktotrough_end >= 1.5 && md.feat.peaktotrough_mid >= 1.5 && (md.feat.peaktotrough_mid / md.feat.peaktotrough_end) <= 1.5;
     cout<<"WILD P0: "<<md.conds_passed[SEC_POST][0]*5<<endl;
@@ -42,6 +50,11 @@ double test_wildtype_post (mutant_data& md, features& wtfeat) {
     cout<<"WILD POST SUM "<<(md.conds_passed[SEC_POST][1] * md.cond_scores[SEC_POST][1]) +
     (md.conds_passed[SEC_POST][0] * md.cond_scores[SEC_POST][0])<<endl;
     
+    //print to file
+    ofstream myfile;
+    myfile.open ("features.txt",std::ofstream::app);
+    myfile<<md.feat.period_post<<" "<<md.conds_passed[SEC_POST][1]<<" ";
+    
     return  (md.conds_passed[SEC_POST][1] * md.cond_scores[SEC_POST][1]) +
             (md.conds_passed[SEC_POST][0] * md.cond_scores[SEC_POST][0]);
     
@@ -50,6 +63,7 @@ double test_wildtype_post (mutant_data& md, features& wtfeat) {
 
 
 double test_wildtype_ant (mutant_data& md, features& wtfeat) {
+    
     // 1.4-2.2 period ratio of ant/post, should be condition2, details in feats.cpp
     cout<<"WILD 0: "<<md.conds_passed[SEC_ANT][0]*5<<endl;
     
@@ -77,6 +91,11 @@ double test_wildtype_ant (mutant_data& md, features& wtfeat) {
     (md.conds_passed[SEC_ANT][6] * md.cond_scores[SEC_ANT][6]) +
     (md.conds_passed[SEC_ANT][7] * md.cond_scores[SEC_ANT][7])<<endl;
     
+    //print to file
+    ofstream myfile;
+    myfile.open ("features.txt",std::ofstream::app);
+    myfile<<md.conds_passed[SEC_ANT][0]<<" "<<md.feat.sync_score_ant[IMH1]<<" "<<md.feat.sync_score_ant[1]<<" "<<md.feat.sync_score_ant[2]<<" ";
+    
     return
     (md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]) +
     (md.conds_passed[SEC_ANT][1] * md.cond_scores[SEC_ANT][1]) +
@@ -88,6 +107,7 @@ double test_wildtype_ant (mutant_data& md, features& wtfeat) {
 
 
 double test_delta_mutant_post (mutant_data& md, features& wtfeat) {
+    
     //delta post
     //continuous score calculation
     double temp=0;
@@ -106,6 +126,12 @@ double test_delta_mutant_post (mutant_data& md, features& wtfeat) {
     
     //print total socre for this mutant
     cout<<"DELTA POST SUM "<<(md.conds_passed[SEC_POST][0] * md.cond_scores[SEC_POST][0])<<endl;
+    
+    //print to file
+    ofstream myfile;
+    myfile.open ("features.txt",std::ofstream::app);
+    myfile<<md.feat.period_post <<" "<< wtfeat.period_post<<" ";
+    
     return (md.conds_passed[SEC_POST][0] * md.cond_scores[SEC_POST][0]);
     
 }
@@ -151,6 +177,12 @@ double test_delta_mutant_ant (mutant_data& md, features& wtfeat) {
     (md.conds_passed[SEC_ANT][1] * md.cond_scores[SEC_ANT][1]) +
     (md.conds_passed[SEC_ANT][2] * md.cond_scores[SEC_ANT][2]) +
     (md.conds_passed[SEC_ANT][3] * md.cond_scores[SEC_ANT][3])<<endl;
+    
+    //print to file
+    ofstream myfile;
+    myfile.open ("features.txt",std::ofstream::app);
+    myfile<< md.feat.sync_score_ant[IMH1]<<" "<<md.feat.amplitude_ant_time[IMH1][0] <<" "<< wtfeat.amplitude_ant_time[IMH1][0]<< " "<<md.feat.amplitude_ant_time[IMDELTA][0] <<" "<< wtfeat.amplitude_ant_time[IMDELTA][0]<<" "<<md.feat.sync_score_ant[IMMESPB]<<" ";
+    
     return  (md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]) +
             (md.conds_passed[SEC_ANT][1] * md.cond_scores[SEC_ANT][1]) +
             (md.conds_passed[SEC_ANT][2] * md.cond_scores[SEC_ANT][2]) +
@@ -195,6 +227,11 @@ double test_DAPT_mutant_ant (mutant_data& md, features& wtfeat) {
     (md.conds_passed[SEC_ANT][2] * md.cond_scores[SEC_ANT][2]) +
     (md.conds_passed[SEC_ANT][3] * md.cond_scores[SEC_ANT][3])<<endl;
     
+    //print to file
+    ofstream myfile;
+    myfile.open ("features.txt",std::ofstream::app);
+    myfile<< md.feat.sync_score_ant[IMH1]<<" "<<md.feat.amplitude_ant_time[IMH1][2] <<" "<<  wtfeat.amplitude_ant_time[IMH1][2]<< " "<<md.feat.amplitude_ant_time[IMMESPA][2] << " "<< wtfeat.amplitude_ant_time[IMMESPA][2]<<" "<<md.feat.sync_score_ant[IMMESPB]<<" ";
+    
     return  (md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]) +
             (md.conds_passed[SEC_ANT][1] * md.cond_scores[SEC_ANT][1]) +
             (md.conds_passed[SEC_ANT][2] * md.cond_scores[SEC_ANT][2]) +
@@ -229,6 +266,11 @@ double test_her1over_mutant_ant (mutant_data& md, features& wtfeat) {
     (md.conds_passed[SEC_ANT][2] * md.cond_scores[SEC_ANT][2]) +
     (md.conds_passed[SEC_ANT][3] * md.cond_scores[SEC_ANT][3])<<endl;
 	
+    //print to file
+    ofstream myfile;
+    myfile.open ("features.txt",std::ofstream::app);
+    myfile<< md.feat.amplitude_ant_time[IMH1][1] <<" "<< wtfeat.amplitude_ant_time[IMH1][1]<<" "<<md.feat.amplitude_ant_time[IMDELTA][1] <<" "<< wtfeat.amplitude_ant_time[IMDELTA][1]<< " "<<md.feat.amplitude_ant_time[IMMESPA][1] <<" "<< wtfeat.amplitude_ant_time[IMMESPA][1]<<" "<<(md.feat.sync_score_ant[IMMESPB])<<" ";
+    
     return  (md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]) +
             (md.conds_passed[SEC_ANT][1] * md.cond_scores[SEC_ANT][1]) +
             (md.conds_passed[SEC_ANT][2] * md.cond_scores[SEC_ANT][2]) +
@@ -245,6 +287,12 @@ double test_MESPAOVER_mutant_ant (mutant_data& md, features& wtfeat) {
     
     //print total socre for this mutant
     cout<<"MESPA SUM "<<temp<<endl;
+    
+    //print to file
+    ofstream myfile;
+    myfile.open ("features.txt",std::ofstream::app);
+    myfile<< md.feat.amplitude_ant_time[IMMESPB][0] <<" "<< wtfeat.amplitude_ant_time[IMMESPB][0]<<" ";
+    
     return isnan(md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0])? 0: (md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]);
 }
 
@@ -258,6 +306,12 @@ double test_MESPBOVER_mutant_ant (mutant_data& md, features& wtfeat) {
     //print total socre for this mutant
     double temp = isnan((md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0])) ? 0 : (md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]);
     cout<<"MEPSB SUM"<<temp<<endl;
+    
+    //print to file
+    ofstream myfile;
+    myfile.open ("features.txt",std::ofstream::app);
+    myfile<< md.feat.amplitude_ant_time[IMMESPB][0] <<" "<< wtfeat.amplitude_ant_time[IMMESPB][0]<<endl;
+    
     return isnan((md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0])) ? 0 : (md.conds_passed[SEC_ANT][0] * md.cond_scores[SEC_ANT][0]);
 }
 
