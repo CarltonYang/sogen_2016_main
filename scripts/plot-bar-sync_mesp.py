@@ -5,24 +5,41 @@ from scipy.stats.stats import pearsonr
 import sys
 import shared
 import struct
-
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
 def main():
 	# check the given arguments
-	if len(sys.argv) < 2:
+	if len(sys.argv) < 3:
 		usage()
 	else:
 		directory = sys.argv[1]
 		image_name = sys.argv[2]
+                source = sys.argv[3]
 
-		
-	x1,y1= plot_bar([0.225549,0.318389,0.271645,0.262574,0.397854])
-	x2,y2= plot_bar([0.679839,0.679839,0.679839])
-	x3,y3= plot_bar([0.434843,0.440127, 0.339495, 0.179424, 0.141485 ])
+        with open(source,'r') as f:
+                reader = csv.DictReader(f)
+                her1mlist=[]
+                deltamlist=[]
+                daptmlist=[]
+                for line in reader:
+                        
+                        info1 = line['11']
+                        info2 = line['15']
+                        info3 = line['19']
+                        
+                        deltam = float(info1)
+                        her1m= float(info2)
+                        daptm = float(info3)
+                        her1mlist.append(her1m)
+                        deltamlist.append(deltam)
+                        daptmlist.append(daptm)
 
-	
+        x1,y1= plot_bar(deltamlist)
+	x2,y2= plot_bar(her1mlist)
+	x3,y3= plot_bar(daptmlist)
+
         N = 3
         men_means = (x1, x2, x3)
         men_std = (y1,y2,y3)

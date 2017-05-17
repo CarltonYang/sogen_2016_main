@@ -5,25 +5,46 @@ from scipy.stats.stats import pearsonr
 import sys
 import shared
 import struct
-
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
 def main():
 	# check the given arguments
-	if len(sys.argv) < 2:
+	if len(sys.argv) < 3:
 		usage()
 	else:
 		directory = sys.argv[1]
 		image_name = sys.argv[2]
+                source = sys.argv[3]
 
-        wx1,wy1= plot_bar([90.1468, 87.8686, 80.1295, 89.1481, 94.1868 ])
-	wx2,wy2= plot_bar([90.2436, 86.8337, 88.0755, 96.9878, 86.1342])
-	#wx3,wy3= plot_bar([264.044, 225.314, 229.264, 277.473, 313.41])
-		
-	mx1,my1= plot_bar([76.0737, 77.0444, 76.7792, 76.206, 76.2364])
-	mx2,my2= plot_bar([77.3286, 77.3674, 73.6787, 72.4206, 75.464])
-	#mx3,my3= plot_bar([0.00619674, 0.00238415, 0.00108412, 0.000448733, 0.000117573])
+        with open(source,'r') as f:
+                reader = csv.DictReader(f)
+   
+                deltamlist=[]
+                deltawlist=[]
+                daptmlist=[]
+                daptwlist=[]
+                for line in reader:
+                        
+                        info1 = line['9'].split('/')
+                        info2 = line['17'].split('/')
+ 
+                        deltam,deltaw = float(info1[0]),float(info1[1])
+                        daptm,daptw = float(info2[0]),float(info2[1])
+
+
+                        deltamlist.append(deltam)
+                        deltawlist.append(deltaw)
+                        daptmlist.append(daptm)
+                        daptwlist.append(daptw)
+                                
+        wx1,wy1= plot_bar(deltawlist)
+	wx2,wy2= plot_bar(daptwlist)
+	
+	mx1,my1= plot_bar(deltamlist)
+	mx2,my2= plot_bar(daptmlist)
+
         N = 2
         men_means = (wx1, wx2)
         men_std = (wy1,wy2)

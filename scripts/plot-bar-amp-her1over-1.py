@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 def main():
 	# check the given arguments
-	if len(sys.argv) < 2:
+	if len(sys.argv) < 3:
 		usage()
 	else:
 		directory = sys.argv[1]
@@ -27,7 +27,7 @@ def main():
                 mespamlist=[]
                 mespawlist=[]
                 for line in reader:
-                        print line['12']
+                        
                         info1 = line['12'].split('/')
                         info2 = line['13'].split('/')
                         info3 = line['14'].split('/')

@@ -100,31 +100,37 @@ NOTE:
 ——————————————————————————————————————————————
 4.3
 plot mh1 synchronization bar graph
+column 8, 4 ,16
 
 python plot-bar-sync_mh1.py ./check sync_score_mh1
 ——————————————————————————————————————————————
 4.4
 plot mesp synchronization bar graph
+column 11, 15, 19
 
 python plot-bar-sync_mesp.py ./check sync_score_mesp
 ——————————————————————————————————————————————
 4.5
 plot her1 mRNA amplitude (WT/Delta, WT/DAPT) bar graph
+column 9,17
 
 python plot-bar-amp_mh1-5 ./check amp_score_mh1
 ——————————————————————————————————————————————
 4.6
 plot mespa amplitude comparison (WT/Delta, WT/DAPT) bar graph
+column 10, 18
 
 python plot-bar-amp-mmespa-5 ./check amp_score_mespa
 ——————————————————————————————————————————————
 4.7
 plot mespb mRNA in Mespa/Mespb amplitude
+column 20, 21
 
 python plot-bar-amp-mesp-1.py ./check amp_score_mesp-1
 ——————————————————————————————————————————————
 4.8
 plot wildtype/her1over mRNA amplitude
+column 12,13,14
 
 python plot-bar-amp-her1over-1.py ./ testing features.csv
 
